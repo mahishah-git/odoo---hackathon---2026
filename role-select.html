@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISRO Inventory — Select Role</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #05060f;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      animation: fadeIn 1s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .top-label {
+      font-size: 11px;
+      color: #e8631a;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      font-size: 32px;
+      color: #ffffff;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .sub {
+      font-size: 13px;
+      color: #8899aa;
+      margin-bottom: 48px;
+    }
+
+    .roles {
+      display: flex;
+      gap: 0;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #1e2a4a;
+      width: 560px;
+    }
+
+    .role {
+      flex: 1;
+      padding: 40px 32px;
+      cursor: pointer;
+      background: rgba(13, 18, 36, 0.85);
+      backdrop-filter: blur(12px);
+      transition: all 0.3s ease;
+      border: 3px solid transparent;
+      text-align: center;
+      position: relative;
+    }
+
+    .role:first-child {
+      border-right: 1px solid #1e2a4a;
+    }
+
+    .role:hover {
+      background: rgba(232, 99, 26, 0.08);
+    }
+
+    .role.selected {
+      border-color: #e8631a;
+      background: rgba(232, 99, 26, 0.12);
+    }
+
+    .role-icon {
+      font-size: 40px;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .role-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 8px;
+    }
+
+    .role-desc {
+      font-size: 12px;
+      color: #8899aa;
+      line-height: 1.6;
+    }
+
+    .selected-check {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      width: 22px;
+      height: 22px;
+      background: #e8631a;
+      border-radius: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: white;
+    }
+
+    .role.selected .selected-check {
+      display: flex;
+    }
+
+    .btn-continue {
+      margin-top: 32px;
+      padding: 14px 56px;
+      background: #e8631a;
+      color: #ffffff;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      opacity: 0.4;
+      pointer-events: none;
+      transition: all 0.3s ease;
+      letter-spacing: 0.5px;
+    }
+
+    .btn-continue.active {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .btn-continue.active:hover {
+      background: #cf5515;
+    }
+
+    .divider {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 1px;
+      height: 60%;
+      background: #1e2a4a;
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="stars"></canvas>
+
+  <div class="content">
+    <div class="top-label">ISRO INVENTORY</div>
+    <h1>Who are you?</h1>
+    <div class="sub">Select your role to continue</div>
+
+    <div class="roles">
+      <div class="role" id="manager" onclick="selectRole('manager')">
+        <div class="selected-check">✓</div>
+        <span class="role-icon">📊</span>
+        <div class="role-title">Supply Manager</div>
+        <div class="role-desc">Oversee all stock operations, approve receipts and deliveries.</div>
+      </div>
+      <div class="role" id="technician" onclick="selectRole('technician')">
+        <div class="selected-check">✓</div>
+        <span class="role-icon">🔧</span>
+        <div class="role-title">Field Technician</div>
+        <div class="role-desc">Receive shipments, move stock between locations, pack deliveries, count inventory</div>
+      </div>
+    </div>
+
+    <br/>
+    <button class="btn-continue" id="continueBtn" onclick="proceed()">
+      Continue →
+    </button>
+  </div>
+
+  <script>
+    let selectedRole = null;
+
+    function selectRole(role) {
+      selectedRole = role;
+      document.querySelectorAll('.role').forEach(r => r.classList.remove('selected'));
+      document.getElementById(role).classList.add('selected');
+      document.getElementById('continueBtn').classList.add('active');
+    }
+
+    function proceed() {
+      if (!selectedRole) return;
+      localStorage.setItem('isro_role', selectedRole);
+      window.location.href = 'login.html';
+    }
+
+    // Starfield
+    const canvas = document.getElementById('stars');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function createStars() {
+      stars = [];
+      for (let i = 0; i < 200; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: Math.random() * 1.5 + 0.3,
+          depth: Math.random() * 3 + 1,
+          opacity: Math.random() * 0.8 + 0.2,
+          twinkle: Math.random() * 0.02 + 0.005,
+          twinkleDir: Math.random() > 0.5 ? 1 : -1,
+        });
+      }
+    }
+
+    window.addEventListener('mousemove', e => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      stars.forEach(s => {
+        const offsetX = (mouse.x - canvas.width / 2) / (canvas.width / 2) * s.depth * 6;
+        const offsetY = (mouse.y - canvas.height / 2) / (canvas.height / 2) * s.depth * 6;
+        s.opacity += s.twinkle * s.twinkleDir;
+        if (s.opacity >= 1 || s.opacity <= 0.1) s.twinkleDir *= -1;
+        ctx.beginPath();
+        ctx.arc(s.x + offsetX, s.y + offsetY, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${s.opacity})`;
+        ctx.fill();
+      });
+      requestAnimationFrame(draw);
+    }
+
+    resize();
+    createStars();
+    draw();
+    window.addEventListener('resize', () => { resize(); createStars(); });
+  </script>
+
+</body>
+</html>

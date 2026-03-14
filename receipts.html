@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISRO Inventory — Receipts</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #05060f; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; }
+    canvas#stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+    .ui { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
+
+    /* Navbar */
+    .navbar { background: rgba(13,18,36,0.6); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 0 20px; height: 50px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .nav-logo { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+    .nav-logo span { color: #e8631a; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-pill { background: rgba(232,99,26,0.15); border: 1px solid rgba(232,99,26,0.3); color: #e8631a; font-size: 11px; padding: 4px 12px; border-radius: 20px; }
+    .nav-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; position: relative; }
+    .notif-count { position: absolute; top: -4px; right: -4px; background: #ef4444; color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+
+    /* Body */
+    .body { display: flex; flex: 1; overflow: hidden; }
+
+    /* Sidebar */
+    .sidebar { width: 54px; background: rgba(8,12,28,0.7); backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 6px; flex-shrink: 0; }
+    .si { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+    .si:hover { background: rgba(255,255,255,0.06); }
+    .si.active { background: rgba(232,99,26,0.2); border: 1px solid rgba(232,99,26,0.35); }
+    .si-gap { flex: 1; }
+
+    .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
+
+    /* Main */
+    .main { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 12px; overflow: hidden; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .page-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .page-title span { color: #e8631a; }
+
+    .btn-add { background: #e8631a; color: #fff; border: none; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn-add:hover { background: #cf5515; }
+
+    /* Stats row */
+    .stats-row { display: flex; gap: 10px; flex-shrink: 0; }
+    .stat-card { flex: 1; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+    .stat-icon { font-size: 22px; }
+    .stat-num { font-size: 20px; font-weight: 700; color: #fff; line-height: 1; }
+    .stat-label { font-size: 10px; color: #8899aa; margin-top: 2px; }
+
+    /* Filters */
+    .filters { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+    .filter-pill { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 6px 14px; font-size: 11px; color: #8899aa; cursor: pointer; transition: all 0.2s; }
+    .filter-pill:hover, .filter-pill.active { background: rgba(232,99,26,0.15); border-color: rgba(232,99,26,0.4); color: #e8631a; }
+    .search-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 6px 16px; font-size: 11px; color: #e2e8f0; outline: none; width: 200px; margin-left: auto; }
+    .search-box::placeholder { color: #4a5a7a; }
+    .search-box:focus { border-color: rgba(232,99,26,0.4); }
+
+    /* Table */
+    .table-wrap { flex: 1; overflow-y: auto; }
+    .table-wrap::-webkit-scrollbar { width: 4px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 10px 14px; text-align: left; font-size: 9px; color: #8899aa; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); position: sticky; top: 0; background: rgba(8,12,28,0.95); backdrop-filter: blur(20px); }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.15s; }
+    tbody tr:hover { background: rgba(255,255,255,0.04); }
+    tbody td { padding: 11px 14px; font-size: 12px; color: #ccd6e8; }
+
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+    .badge-draft  { background: rgba(148,163,184,0.1); border: 1px solid rgba(148,163,184,0.3); color: #94a3b8; }
+    .badge-waiting{ background: rgba(245,158,11,0.1);  border: 1px solid rgba(245,158,11,0.3);  color: #f59e0b; }
+    .badge-ready  { background: rgba(59,130,246,0.1);  border: 1px solid rgba(59,130,246,0.3);  color: #3b82f6; }
+    .badge-done   { background: rgba(34,197,94,0.12);  border: 1px solid rgba(34,197,94,0.3);   color: #22c55e; }
+    .badge-cancel { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.3);   color: #ef4444; }
+
+    /* Detail Panel */
+    .detail-panel { position: fixed; right: -500px; top: 50px; width: 480px; height: calc(100vh - 50px); background: rgba(10,14,30,0.97); backdrop-filter: blur(20px); border-left: 1px solid rgba(255,255,255,0.08); padding: 24px; z-index: 150; transition: right 0.3s ease; overflow-y: auto; }
+    .detail-panel.open { right: 0; }
+    .detail-panel::-webkit-scrollbar { width: 4px; }
+    .detail-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    .dp-close { position: absolute; top: 16px; right: 16px; cursor: pointer; font-size: 18px; color: #8899aa; }
+    .dp-close:hover { color: #fff; }
+    .dp-label { font-size: 9px; color: #e8631a; letter-spacing: 2px; font-weight: 700; margin-bottom: 4px; }
+    .dp-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .dp-sub { font-size: 12px; color: #8899aa; margin-bottom: 20px; }
+    .dp-section { font-size: 9px; color: #e8631a; letter-spacing: 2px; font-weight: 700; margin: 16px 0 8px; }
+    .dp-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+    .dp-row span:first-child { color: #8899aa; }
+    .dp-row span:last-child { color: #e2e8f0; font-weight: 500; }
+
+    .items-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    .items-table th { font-size: 9px; color: #8899aa; letter-spacing: 1px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); text-align: left; }
+    .items-table td { font-size: 11px; color: #ccd6e8; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+    .validate-btn { width: 100%; background: #22c55e; color: #fff; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 20px; transition: background 0.2s; letter-spacing: 0.5px; }
+    .validate-btn:hover { background: #16a34a; }
+    .validate-btn:disabled { background: rgba(255,255,255,0.1); color: #4a5a7a; cursor: not-allowed; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); z-index: 200; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: rgba(13,18,36,0.97); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px; width: 520px; max-height: 85vh; overflow-y: auto; }
+    .modal-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .modal-sub { font-size: 12px; color: #8899aa; margin-bottom: 24px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 11px; color: #8899aa; margin-bottom: 6px; }
+    .field input, .field select { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #e2e8f0; outline: none; transition: border-color 0.2s; }
+    .field input:focus, .field select:focus { border-color: #e8631a; }
+    .field input::placeholder { color: #2a3a5a; }
+    .field select option { background: #0d1224; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .items-section { margin: 16px 0; }
+    .items-section-title { font-size: 11px; color: #e8631a; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
+    .item-row { display: grid; grid-template-columns: 1fr 100px 80px; gap: 8px; margin-bottom: 8px; align-items: center; }
+    .item-row select, .item-row input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #e2e8f0; outline: none; }
+    .item-row select:focus, .item-row input:focus { border-color: #e8631a; }
+    .item-row select option { background: #0d1224; }
+    .remove-btn { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+    .add-item-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #8899aa; border-radius: 8px; padding: 8px 16px; font-size: 12px; cursor: pointer; transition: all 0.2s; margin-top: 4px; }
+    .add-item-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-primary { flex: 1; background: #e8631a; color: #fff; border: none; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn-primary:hover { background: #cf5515; }
+    .btn-cancel { flex: 1; background: rgba(255,255,255,0.05); color: #8899aa; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 11px; font-size: 14px; cursor: pointer; }
+    .btn-cancel:hover { background: rgba(255,255,255,0.08); }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="ui">
+
+  <div class="navbar">
+    <div class="nav-logo">ISRO <span>INVENTORY</span></div>
+    <div class="nav-right">
+      <div class="nav-pill" id="rolePill">Supply Manager</div>
+      <div class="nav-icon">🔔<div class="notif-count">4</div></div>
+      <div class="nav-icon" onclick="window.location.href='profile.html'">👤</div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <div class="sidebar">
+      <a class="si" href="dashboard.html">📊</a>
+      <a class="si" href="products.html">📦</a>
+      <a class="si active" href="receipts.html">📥</a>
+      <a class="si" href="delivery.html">🚚</a>
+      <a class="si" href="transfers.html">🔄</a>
+      <a class="si" href="adjustments.html">📋</a>
+      <a class="si" href="history.html">🕐</a>
+      <div class="si-gap"></div>
+      <a class="si" href="settings.html">⚙️</a>
+      <a class="si" href="profile.html">👤</a>
+    </div>
+
+    <div class="main">
+
+      <div class="topbar">
+        <div>
+          <div class="page-title">📥 <span>Receipts</span></div>
+          <div style="font-size:11px;color:#8899aa;margin-top:2px;">Incoming components from vendors</div>
+        </div>
+        <button class="btn-add" onclick="openModal()">+ New Receipt</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="glass stat-card">
+          <div class="stat-icon">📥</div>
+          <div><div class="stat-num">12</div><div class="stat-label">Total Receipts</div></div>
+        </div>
+        <div class="glass stat-card">
+          <div class="stat-icon">⏳</div>
+          <div><div class="stat-num" style="color:#f59e0b;">5</div><div class="stat-label">Pending</div></div>
+        </div>
+        <div class="glass stat-card">
+          <div class="stat-icon">✅</div>
+          <div><div class="stat-num" style="color:#22c55e;">6</div><div class="stat-label">Validated</div></div>
+        </div>
+        <div class="glass stat-card">
+          <div class="stat-icon">🚫</div>
+          <div><div class="stat-num" style="color:#ef4444;">1</div><div class="stat-label">Cancelled</div></div>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <div class="filter-pill active" onclick="filterStatus('all',this)">All</div>
+        <div class="filter-pill" onclick="filterStatus('Draft',this)">Draft</div>
+        <div class="filter-pill" onclick="filterStatus('Waiting',this)">Waiting</div>
+        <div class="filter-pill" onclick="filterStatus('Ready',this)">Ready</div>
+        <div class="filter-pill" onclick="filterStatus('Done',this)">Done</div>
+        <div class="filter-pill" onclick="filterStatus('Cancelled',this)">Cancelled</div>
+        <input class="search-box" type="text" placeholder="🔍  Search receipt or vendor..." oninput="searchReceipts(this.value)"/>
+      </div>
+
+      <!-- Table -->
+      <div class="glass table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Receipt ID</th>
+              <th>Vendor</th>
+              <th>Components</th>
+              <th>Total Qty</th>
+              <th>Warehouse</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="receiptTable"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-close" onclick="closeDetail()">✕</div>
+  <div id="detailContent"></div>
+</div>
+
+<!-- New Receipt Modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title">New Receipt</div>
+    <div class="modal-sub">Log incoming components from a vendor</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Receipt ID</label>
+        <input type="text" id="f-id" placeholder="Auto: ISR-013" readonly style="color:#4a6a9a;"/>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="f-date"/>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Vendor / Procurement Agency</label>
+      <select id="f-vendor">
+        <option>HAL — Hindustan Aeronautics Limited</option>
+        <option>L&T Aerospace</option>
+        <option>DRDO Supply Wing</option>
+        <option>Godrej Aerospace</option>
+        <option>MTAR Technologies</option>
+        <option>Walchandnagar Industries</option>
+        <option>BEL — Bharat Electronics</option>
+      </select>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Receiving Warehouse</label>
+        <select id="f-warehouse">
+          <option>BLR — Bengaluru</option>
+          <option>TVM — Thiruvananthapuram</option>
+          <option>AMD — Ahmedabad</option>
+          <option>SHR — Sriharikota</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Mission Tag</label>
+        <select id="f-mission">
+          <option>Gaganyaan Crewed</option>
+          <option>NISAR</option>
+          <option>Aditya-L1</option>
+          <option>General Stock</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="items-section">
+      <div class="items-section-title">COMPONENTS TO RECEIVE</div>
+      <div id="itemRows">
+        <div class="item-row">
+          <select><option value="">Select component...</option><option>Cryogenic Engine Nozzle</option><option>Titanium Heat Shield</option><option>Solar Panel (Satellite)</option><option>Liquid Hydrogen Fuel</option><option>Carbon Fibre Panel</option><option>Space Suit</option><option>Oxygen Canister</option><option>Parachute Assembly</option><option>Gyroscope Sensor</option><option>Reaction Wheel</option></select>
+          <input type="number" placeholder="Qty" min="1"/>
+          <button class="remove-btn" onclick="removeRow(this)">✕</button>
+        </div>
+      </div>
+      <button class="add-item-btn" onclick="addItemRow()">+ Add Component</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="createReceipt()">Create Receipt →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const role = localStorage.getItem('isro_role');
+  if (role === 'technician') document.getElementById('rolePill').textContent = 'Field Technician';
+
+  // Set today's date
+  document.getElementById('f-date').valueAsDate = new Date();
+  document.getElementById('f-id').value = 'ISR-013';
+
+  let receipts = [
+    { id: 'ISR-001', vendor: 'HAL — Hindustan Aeronautics', items: ['Cryogenic Engine Nozzle x12', 'Hydraulic Pump x5'], qty: 17, warehouse: 'BLR', date: '2026-03-01', status: 'Done', mission: 'Gaganyaan Crewed' },
+    { id: 'ISR-002', vendor: 'L&T Aerospace', items: ['Carbon Fibre Panel x50', 'Titanium Heat Shield x20'], qty: 70, warehouse: 'AMD', date: '2026-03-03', status: 'Done', mission: 'Gaganyaan Crewed' },
+    { id: 'ISR-003', vendor: 'DRDO Supply Wing', items: ['Space Suit x6'], qty: 6, warehouse: 'TVM', date: '2026-03-05', status: 'Done', mission: 'Gaganyaan Crewed' },
+    { id: 'ISR-004', vendor: 'MTAR Technologies', items: ['Cryogenic Engine Nozzle x8'], qty: 8, warehouse: 'BLR', date: '2026-03-06', status: 'Done', mission: 'Gaganyaan Crewed' },
+    { id: 'ISR-005', vendor: 'BEL — Bharat Electronics', items: ['Solar Panel (Satellite) x20', 'Gyroscope Sensor x10'], qty: 30, warehouse: 'BLR', date: '2026-03-07', status: 'Done', mission: 'NISAR' },
+    { id: 'ISR-006', vendor: 'Godrej Aerospace', items: ['Parachute Assembly x6'], qty: 6, warehouse: 'BLR', date: '2026-03-08', status: 'Done', mission: 'Gaganyaan Crewed' },
+    { id: 'ISR-007', vendor: 'L&T Aerospace', items: ['Reaction Wheel x20', 'Star Tracker Sensor x15'], qty: 35, warehouse: 'TVM', date: '2026-03-09', status: 'Ready', mission: 'NISAR' },
+    { id: 'ISR-008', vendor: 'Walchandnagar Industries', items: ['Thermal Blanket x60'], qty: 60, warehouse: 'AMD', date: '2026-03-10', status: 'Ready', mission: 'Gaganyaan Crewed' },
+    { id: 'ISR-009', vendor: 'HAL — Hindustan Aeronautics', items: ['Hydraulic Pump x10'], qty: 10, warehouse: 'BLR', date: '2026-03-11', status: 'Waiting', mission: 'Gaganyaan Crewed' },
+    { id: 'ISR-010', vendor: 'DRDO Supply Wing', items: ['Oxygen Canister x30'], qty: 30, warehouse: 'TVM', date: '2026-03-11', status: 'Waiting', mission: 'Gaganyaan Crewed' },
+    { id: 'ISR-011', vendor: 'MTAR Technologies', items: ['Cryogenic Engine Nozzle x15'], qty: 15, warehouse: 'SHR', date: '2026-03-12', status: 'Draft', mission: 'Gaganyaan Crewed' },
+    { id: 'ISR-012', vendor: 'BEL — Bharat Electronics', items: ['Communication Antenna x5'], qty: 5, warehouse: 'SHR', date: '2026-03-08', status: 'Cancelled', mission: 'General Stock' },
+  ];
+
+  let filtered = [...receipts];
+
+  function badgeHTML(status) {
+    const map = { Draft: 'badge-draft', Waiting: 'badge-waiting', Ready: 'badge-ready', Done: 'badge-done', Cancelled: 'badge-cancel' };
+    return `<span class="badge ${map[status] || 'badge-draft'}">● ${status}</span>`;
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('receiptTable');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#4a5a7a;padding:40px;">No receipts found</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map(r => `
+      <tr onclick="openDetail('${r.id}')">
+        <td style="font-weight:700;color:#e8631a;font-family:monospace;">${r.id}</td>
+        <td style="color:#e2e8f0;">${r.vendor.split('—')[0].trim()}</td>
+        <td style="color:#8899aa;font-size:11px;">${r.items.length} component${r.items.length > 1 ? 's' : ''}</td>
+        <td style="font-weight:700;color:#fff;">${r.qty}</td>
+        <td><span style="background:rgba(232,99,26,0.1);border:1px solid rgba(232,99,26,0.2);border-radius:6px;padding:2px 8px;font-size:10px;color:#e8631a;">${r.warehouse}</span></td>
+        <td style="color:#8899aa;">${r.date}</td>
+        <td>${badgeHTML(r.status)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function filterStatus(status, el) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    filtered = status === 'all' ? [...receipts] : receipts.filter(r => r.status === status);
+    renderTable();
+  }
+
+  function searchReceipts(q) {
+    const query = q.toLowerCase();
+    filtered = receipts.filter(r => r.id.toLowerCase().includes(query) || r.vendor.toLowerCase().includes(query));
+    renderTable();
+  }
+
+  function openDetail(id) {
+    const r = receipts.find(x => x.id === id);
+    const isDone = r.status === 'Done';
+    const isCancelled = r.status === 'Cancelled';
+
+    document.getElementById('detailContent').innerHTML = `
+      <div class="dp-label">RECEIPT DETAIL</div>
+      <div class="dp-title">${r.id}</div>
+      <div class="dp-sub">${r.vendor}</div>
+      ${badgeHTML(r.status)}
+
+      <div class="dp-section">DETAILS</div>
+      <div class="dp-row"><span>Date</span><span>${r.date}</span></div>
+      <div class="dp-row"><span>Warehouse</span><span>${r.warehouse}</span></div>
+      <div class="dp-row"><span>Mission</span><span>${r.mission}</span></div>
+      <div class="dp-row"><span>Total Quantity</span><span style="color:#fff;font-weight:700;">${r.qty} units</span></div>
+
+      <div class="dp-section">COMPONENTS</div>
+      <table class="items-table">
+        <thead><tr><th>Component</th><th>Quantity</th></tr></thead>
+        <tbody>
+          ${r.items.map(item => {
+            const parts = item.split(' x');
+            return `<tr><td>${parts[0]}</td><td style="color:#22c55e;font-weight:700;">+${parts[1]}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+
+      <button class="validate-btn" ${isDone || isCancelled ? 'disabled' : ''} onclick="validateReceipt('${r.id}')">
+        ${isDone ? '✅ Already Validated' : isCancelled ? '🚫 Cancelled' : '✅ Validate Receipt — Stock Will Increase'}
+      </button>
+
+      ${!isDone && !isCancelled ? `<button onclick="cancelReceipt('${r.id}')" style="width:100%;margin-top:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:10px;padding:10px;font-size:13px;cursor:pointer;">Cancel Receipt</button>` : ''}
+    `;
+    document.getElementById('detailPanel').classList.add('open');
+  }
+
+  function validateReceipt(id) {
+    const r = receipts.find(x => x.id === id);
+    r.status = 'Done';
+    renderTable();
+    openDetail(id);
+    showToast(`✅ ${id} validated! Stock updated.`);
+  }
+
+  function cancelReceipt(id) {
+    const r = receipts.find(x => x.id === id);
+    r.status = 'Cancelled';
+    renderTable();
+    openDetail(id);
+    showToast(`🚫 ${id} cancelled.`);
+  }
+
+  function closeDetail() { document.getElementById('detailPanel').classList.remove('open'); }
+
+  function openModal() { document.getElementById('addModal').classList.add('show'); }
+  function closeModal() { document.getElementById('addModal').classList.remove('show'); }
+
+  function addItemRow() {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `
+      <select><option value="">Select component...</option><option>Cryogenic Engine Nozzle</option><option>Titanium Heat Shield</option><option>Solar Panel (Satellite)</option><option>Liquid Hydrogen Fuel</option><option>Carbon Fibre Panel</option><option>Space Suit</option><option>Oxygen Canister</option><option>Parachute Assembly</option><option>Gyroscope Sensor</option><option>Reaction Wheel</option></select>
+      <input type="number" placeholder="Qty" min="1"/>
+      <button class="remove-btn" onclick="removeRow(this)">✕</button>`;
+    document.getElementById('itemRows').appendChild(row);
+  }
+
+  function removeRow(btn) {
+    const rows = document.getElementById('itemRows').querySelectorAll('.item-row');
+    if (rows.length > 1) btn.closest('.item-row').remove();
+  }
+
+  function createReceipt() {
+    const vendor = document.getElementById('f-vendor').value;
+    const warehouse = document.getElementById('f-warehouse').value.split('—')[0].trim();
+    const mission = document.getElementById('f-mission').value;
+    const date = document.getElementById('f-date').value;
+    const rows = document.getElementById('itemRows').querySelectorAll('.item-row');
+    const items = [];
+    let totalQty = 0;
+    rows.forEach(row => {
+      const comp = row.querySelector('select').value;
+      const qty = parseInt(row.querySelector('input').value) || 0;
+      if (comp && qty > 0) { items.push(`${comp} x${qty}`); totalQty += qty; }
+    });
+    if (!items.length) { alert('Please add at least one component'); return; }
+    const newId = `ISR-0${13 + receipts.length}`;
+    receipts.unshift({ id: newId, vendor, items, qty: totalQty, warehouse, date, status: 'Draft', mission });
+    filtered = [...receipts];
+    renderTable();
+    closeModal();
+    showToast(`📥 Receipt ${newId} created!`);
+  }
+
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(13,18,36,0.95);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;padding:12px 24px;border-radius:12px;font-size:13px;z-index:999;backdrop-filter:blur(20px);';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  renderTable();
+
+  // Starfield
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [], mouse = { x: window.innerWidth/2, y: window.innerHeight/2 };
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function createStars() { stars = []; for(let i=0;i<180;i++) stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.4+0.2,depth:Math.random()*3+1,opacity:Math.random()*0.7+0.2,tw:Math.random()*0.01+0.003,twd:Math.random()>0.5?1:-1}); }
+  window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+  function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); stars.forEach(s=>{const ox=(mouse.x-canvas.width/2)/(canvas.width/2)*s.depth*5;const oy=(mouse.y-canvas.height/2)/(canvas.height/2)*s.depth*5;s.opacity+=s.tw*s.twd;if(s.opacity>=1||s.opacity<=0.1)s.twd*=-1;ctx.beginPath();ctx.arc(s.x+ox,s.y+oy,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${s.opacity})`;ctx.fill();}); requestAnimationFrame(draw); }
+  resize(); createStars(); draw();
+  window.addEventListener('resize',()=>{resize();createStars();});
+</script>
+
+</body>
+</html>

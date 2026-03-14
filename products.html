@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISRO Inventory — Products</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #05060f;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    canvas#stars {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    .ui {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* Navbar */
+    .navbar {
+      background: rgba(13,18,36,0.6);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding: 0 20px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .nav-logo { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+    .nav-logo span { color: #e8631a; }
+
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+
+    .nav-pill {
+      background: rgba(232,99,26,0.15);
+      border: 1px solid rgba(232,99,26,0.3);
+      color: #e8631a;
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .nav-icon {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .notif-count {
+      position: absolute; top: -4px; right: -4px;
+      background: #ef4444; color: #fff;
+      font-size: 9px; width: 16px; height: 16px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+    }
+
+    /* Body */
+    .body { display: flex; flex: 1; overflow: hidden; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 54px;
+      background: rgba(8,12,28,0.7);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .si {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .si:hover { background: rgba(255,255,255,0.06); }
+    .si.active { background: rgba(232,99,26,0.2); border: 1px solid rgba(232,99,26,0.35); }
+    .si-gap { flex: 1; }
+
+    /* Glass */
+    .glass {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+    }
+
+    /* Main */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      padding: 14px;
+      gap: 12px;
+      overflow: hidden;
+    }
+
+    /* Top bar */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .page-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .page-title span { color: #e8631a; }
+
+    .btn-add {
+      background: #e8631a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 9px 18px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-add:hover { background: #cf5515; }
+
+    /* Filters */
+    .filters {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 11px;
+      color: #8899aa;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-pill:hover, .filter-pill.active {
+      background: rgba(232,99,26,0.15);
+      border-color: rgba(232,99,26,0.4);
+      color: #e8631a;
+    }
+
+    .search-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 11px;
+      color: #e2e8f0;
+      outline: none;
+      width: 200px;
+      margin-left: auto;
+    }
+
+    .search-box::placeholder { color: #4a5a7a; }
+    .search-box:focus { border-color: rgba(232,99,26,0.4); }
+
+    /* Table */
+    .table-wrap {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+
+    .table-wrap::-webkit-scrollbar { width: 4px; }
+    .table-wrap::-webkit-scrollbar-track { background: transparent; }
+    .table-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+    table { width: 100%; border-collapse: collapse; }
+
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 9px;
+      color: #8899aa;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      position: sticky;
+      top: 0;
+      background: rgba(8,12,28,0.95);
+      backdrop-filter: blur(20px);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    tbody tr:hover { background: rgba(255,255,255,0.04); }
+
+    tbody td {
+      padding: 11px 14px;
+      font-size: 12px;
+      color: #ccd6e8;
+    }
+
+    .sku { color: #4a6a9a; font-size: 11px; font-family: monospace; }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .badge-green { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; }
+    .badge-amber { background: rgba(245,158,11,0.12); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; }
+    .badge-red   { background: rgba(239,68,68,0.12);  border: 1px solid rgba(239,68,68,0.3);  color: #ef4444; }
+
+    .cat-tag {
+      background: rgba(255,255,255,0.06);
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 10px;
+      color: #8899aa;
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-overlay.show { display: flex; }
+
+    .modal {
+      background: rgba(13,18,36,0.97);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px;
+      padding: 32px;
+      width: 480px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      margin-bottom: 6px;
+    }
+
+    .modal-sub { font-size: 12px; color: #8899aa; margin-bottom: 24px; }
+
+    .field { margin-bottom: 16px; }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      color: #8899aa;
+      margin-bottom: 6px;
+      letter-spacing: 0.3px;
+    }
+
+    .field input, .field select {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #e2e8f0;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .field input:focus, .field select:focus { border-color: #e8631a; }
+    .field input::placeholder { color: #2a3a5a; }
+    .field select option { background: #0d1224; }
+
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+
+    .btn-primary {
+      flex: 1;
+      background: #e8631a;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn-primary:hover { background: #cf5515; }
+
+    .btn-cancel {
+      flex: 1;
+      background: rgba(255,255,255,0.05);
+      color: #8899aa;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      padding: 11px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-cancel:hover { background: rgba(255,255,255,0.08); }
+
+    /* Detail panel */
+    .detail-panel {
+      position: fixed;
+      right: -420px;
+      top: 50px;
+      width: 400px;
+      height: calc(100vh - 50px);
+      background: rgba(10,14,30,0.97);
+      backdrop-filter: blur(20px);
+      border-left: 1px solid rgba(255,255,255,0.08);
+      padding: 24px;
+      z-index: 150;
+      transition: right 0.3s ease;
+      overflow-y: auto;
+    }
+
+    .detail-panel.open { right: 0; }
+
+    .dp-close {
+      position: absolute;
+      top: 16px; right: 16px;
+      cursor: pointer;
+      font-size: 18px;
+      color: #8899aa;
+    }
+
+    .dp-close:hover { color: #fff; }
+
+    .dp-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+    .dp-sku { font-size: 11px; color: #4a6a9a; font-family: monospace; margin-bottom: 16px; }
+
+    .dp-stat-row { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 16px; }
+
+    .dp-stat {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 10px;
+      text-align: center;
+    }
+
+    .dp-stat-num { font-size: 18px; font-weight: 700; color: #fff; }
+    .dp-stat-label { font-size: 9px; color: #8899aa; margin-top: 3px; }
+
+    .dp-section { font-size: 9px; color: #e8631a; letter-spacing: 2px; font-weight: 700; margin: 14px 0 8px; }
+
+    .dp-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+    .dp-row span:first-child { color: #8899aa; }
+    .dp-row span:last-child { color: #e2e8f0; }
+
+    .history-item {
+      background: rgba(255,255,255,0.03);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11px;
+    }
+
+    .history-item .hi-action { color: #8899aa; }
+    .history-item .hi-qty { font-weight: 700; }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="ui">
+
+  <!-- Navbar -->
+  <div class="navbar">
+    <div class="nav-logo">ISRO <span>INVENTORY</span></div>
+    <div class="nav-right">
+      <div class="nav-pill" id="rolePill">Supply Manager</div>
+      <div class="nav-icon">🔔<div class="notif-count">4</div></div>
+      <div class="nav-icon" onclick="window.location.href='profile.html'">👤</div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <a class="si" href="dashboard.html" title="Dashboard">📊</a>
+      <a class="si active" href="products.html" title="Products">📦</a>
+      <a class="si" href="receipts.html" title="Receipts">📥</a>
+      <a class="si" href="delivery.html" title="Deliveries">🚚</a>
+      <a class="si" href="transfers.html" title="Transfers">🔄</a>
+      <a class="si" href="adjustments.html" title="Adjustments">📋</a>
+      <a class="si" href="history.html" title="Move History">🕐</a>
+      <div class="si-gap"></div>
+      <a class="si" href="settings.html" title="Settings">⚙️</a>
+      <a class="si" href="profile.html" title="Profile">👤</a>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+
+      <div class="topbar">
+        <div>
+          <div class="page-title">📦 <span>Products</span></div>
+          <div style="font-size:11px;color:#8899aa;margin-top:2px;">84 components across 6 departments</div>
+        </div>
+        <button class="btn-add" onclick="openAddModal()">+ Add Component</button>
+      </div>
+
+      <!-- Filters -->
+      <div class="filters">
+        <div class="filter-pill active" onclick="filterCat('all',this)">All</div>
+        <div class="filter-pill" onclick="filterCat('Engine Parts',this)">Engine Parts</div>
+        <div class="filter-pill" onclick="filterCat('Structural',this)">Structural</div>
+        <div class="filter-pill" onclick="filterCat('Electronics',this)">Electronics</div>
+        <div class="filter-pill" onclick="filterCat('Propellant',this)">Propellant</div>
+        <div class="filter-pill" onclick="filterCat('Gaganyaan',this)">Gaganyaan</div>
+        <div class="filter-pill" onclick="filterCat('Ground Support',this)">Ground Support</div>
+        <input class="search-box" type="text" placeholder="🔍  Search by name or SKU..." oninput="searchProducts(this.value)"/>
+      </div>
+
+      <!-- Table -->
+      <div class="glass table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Component Name</th>
+              <th>SKU / Code</th>
+              <th>Category</th>
+              <th>Unit</th>
+              <th>Stock</th>
+              <th>Location</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="productTable"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Add Product Modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title">Add New Component</div>
+    <div class="modal-sub">Enter the details for the new ISRO component</div>
+
+    <div class="field">
+      <label>Component Name</label>
+      <input type="text" placeholder="e.g. Cryogenic Engine Nozzle" id="f-name"/>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>SKU / Component Code</label>
+        <input type="text" placeholder="ISRO-XXX-000" id="f-sku"/>
+      </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="f-cat">
+          <option value="">Select category</option>
+          <option>Engine Parts</option>
+          <option>Structural</option>
+          <option>Electronics</option>
+          <option>Propellant</option>
+          <option>Gaganyaan</option>
+          <option>Ground Support</option>
+          <option>Research Lab</option>
+          <option>General</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Unit of Measure</label>
+        <select id="f-unit">
+          <option>Pieces</option>
+          <option>Litres</option>
+          <option>Kg</option>
+          <option>Sq. Meters</option>
+          <option>Metres</option>
+          <option>Sets</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Initial Stock (optional)</label>
+        <input type="number" placeholder="0" id="f-stock"/>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label>Warehouse</label>
+        <select id="f-warehouse">
+          <option>BLR — Bengaluru</option>
+          <option>TVM — Thiruvananthapuram</option>
+          <option>AMD — Ahmedabad</option>
+          <option>SHR — Sriharikota</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Reorder Level</label>
+        <input type="number" placeholder="e.g. 10" id="f-reorder"/>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="addProduct()">Add Component →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-close" onclick="closeDetail()">✕</div>
+  <div id="detailContent"></div>
+</div>
+
+<script>
+  // Role
+  const role = localStorage.getItem('isro_role');
+  if (role === 'technician') document.getElementById('rolePill').textContent = 'Field Technician';
+
+  // Mock data
+  let products = [
+    { name: 'Cryogenic Engine Nozzle', sku: 'ISRO-ENG-001', cat: 'Engine Parts', unit: 'Pieces', stock: 3, location: 'BLR', reorder: 10, history: ['+12 Receipt', '-5 Delivery', '-4 Delivery'] },
+    { name: 'Titanium Heat Shield', sku: 'ISRO-STR-204', cat: 'Structural', unit: 'Pieces', stock: 47, location: 'TVM', reorder: 15, history: ['+50 Receipt', '-3 Adjustment'] },
+    { name: 'Solar Panel (Satellite)', sku: 'ISRO-SAT-033', cat: 'Electronics', unit: 'Pieces', stock: 8, location: 'BLR', reorder: 20, history: ['+20 Receipt', '-12 Delivery'] },
+    { name: 'Liquid Hydrogen Fuel', sku: 'ISRO-LH2-001', cat: 'Propellant', unit: 'Litres', stock: 2400, location: 'SHR', reorder: 500, history: ['+3000 Receipt', '-600 Delivery'] },
+    { name: 'Carbon Fibre Panel', sku: 'ISRO-CF-112', cat: 'Structural', unit: 'Sq. Meters', stock: 124, location: 'AMD', reorder: 30, history: ['+150 Receipt', '-26 Transfer'] },
+    { name: 'Space Suit', sku: 'ISRO-GGN-007', cat: 'Gaganyaan', unit: 'Pieces', stock: 6, location: 'TVM', reorder: 5, history: ['+6 Receipt'] },
+    { name: 'Oxygen Canister', sku: 'ISRO-GGN-012', cat: 'Gaganyaan', unit: 'Pieces', stock: 0, location: 'TVM', reorder: 20, history: ['+30 Receipt', '-30 Delivery'] },
+    { name: 'Parachute Assembly', sku: 'ISRO-GGN-019', cat: 'Gaganyaan', unit: 'Pieces', stock: 4, location: 'BLR', reorder: 6, history: ['+6 Receipt', '-2 Delivery'] },
+    { name: 'Gyroscope Sensor', sku: 'ISRO-SAT-044', cat: 'Electronics', unit: 'Pieces', stock: 32, location: 'BLR', reorder: 10, history: ['+40 Receipt', '-8 Delivery'] },
+    { name: 'Reaction Wheel', sku: 'ISRO-SAT-051', cat: 'Electronics', unit: 'Pieces', stock: 18, location: 'TVM', reorder: 8, history: ['+20 Receipt', '-2 Adjustment'] },
+    { name: 'Thermal Blanket', sku: 'ISRO-STR-088', cat: 'Structural', unit: 'Pieces', stock: 55, location: 'AMD', reorder: 20, history: ['+60 Receipt', '-5 Delivery'] },
+    { name: 'Rocket Fuel Oxidizer', sku: 'ISRO-OX-091', cat: 'Propellant', unit: 'Litres', stock: 1800, location: 'SHR', reorder: 400, history: ['+2000 Receipt', '-200 Delivery'] },
+    { name: 'Communication Antenna', sku: 'ISRO-GND-007', cat: 'Ground Support', unit: 'Pieces', stock: 12, location: 'SHR', reorder: 4, history: ['+15 Receipt', '-3 Delivery'] },
+    { name: 'Hydraulic Pump', sku: 'ISRO-ENG-022', cat: 'Engine Parts', unit: 'Pieces', stock: 9, location: 'BLR', reorder: 5, history: ['+10 Receipt', '-1 Adjustment'] },
+    { name: 'Star Tracker Sensor', sku: 'ISRO-SAT-067', cat: 'Electronics', unit: 'Pieces', stock: 14, location: 'TVM', reorder: 6, history: ['+15 Receipt', '-1 Delivery'] },
+  ];
+
+  let filtered = [...products];
+
+  function statusBadge(stock, reorder) {
+    if (stock === 0) return `<span class="badge badge-red">● Out of Stock</span>`;
+    if (stock <= reorder) return `<span class="badge badge-amber">● Low Stock</span>`;
+    return `<span class="badge badge-green">● In Stock</span>`;
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('productTable');
+    if (filtered.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#4a5a7a;padding:40px;">No components found</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map((p, i) => `
+      <tr onclick="openDetail(${products.indexOf(p)})">
+        <td style="font-weight:600;color:#e2e8f0;">${p.name}</td>
+        <td class="sku">${p.sku}</td>
+        <td><span class="cat-tag">${p.cat}</span></td>
+        <td style="color:#8899aa;">${p.unit}</td>
+        <td style="font-weight:700;color:#fff;">${p.stock.toLocaleString()}</td>
+        <td><span style="background:rgba(232,99,26,0.1);border:1px solid rgba(232,99,26,0.2);border-radius:6px;padding:2px 8px;font-size:10px;color:#e8631a;">${p.location}</span></td>
+        <td>${statusBadge(p.stock, p.reorder)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function filterCat(cat, el) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    filtered = cat === 'all' ? [...products] : products.filter(p => p.cat === cat);
+    renderTable();
+  }
+
+  function searchProducts(q) {
+    const query = q.toLowerCase();
+    filtered = products.filter(p =>
+      p.name.toLowerCase().includes(query) || p.sku.toLowerCase().includes(query)
+    );
+    renderTable();
+  }
+
+  function openDetail(i) {
+    const p = products[i];
+    const histHTML = p.history.map(h => {
+      const isPos = h.startsWith('+');
+      return `<div class="history-item">
+        <span class="hi-action">${h.includes('Receipt') ? '📥 Receipt' : h.includes('Delivery') ? '🚚 Delivery' : h.includes('Transfer') ? '🔄 Transfer' : '📋 Adjustment'}</span>
+        <span class="hi-qty" style="color:${isPos ? '#22c55e' : '#ef4444'}">${h.split(' ')[0]}</span>
+      </div>`;
+    }).join('');
+
+    document.getElementById('detailContent').innerHTML = `
+      <div class="dp-title">${p.name}</div>
+      <div class="dp-sku">${p.sku}</div>
+      ${statusBadge(p.stock, p.reorder)}
+      <div class="dp-stat-row" style="margin-top:14px;">
+        <div class="dp-stat">
+          <div class="dp-stat-num" style="color:${p.stock===0?'#ef4444':p.stock<=p.reorder?'#f59e0b':'#22c55e'}">${p.stock}</div>
+          <div class="dp-stat-label">Current Stock</div>
+        </div>
+        <div class="dp-stat">
+          <div class="dp-stat-num" style="color:#f59e0b;">${p.reorder}</div>
+          <div class="dp-stat-label">Reorder Level</div>
+        </div>
+        <div class="dp-stat">
+          <div class="dp-stat-num">${p.history.length}</div>
+          <div class="dp-stat-label">Movements</div>
+        </div>
+      </div>
+      <div class="dp-section">DETAILS</div>
+      <div class="dp-row"><span>Category</span><span>${p.cat}</span></div>
+      <div class="dp-row"><span>Unit of Measure</span><span>${p.unit}</span></div>
+      <div class="dp-row"><span>Location</span><span>${p.location}</span></div>
+      <div class="dp-section">STOCK HISTORY</div>
+      ${histHTML}
+      <div style="margin-top:16px;display:flex;gap:8px;">
+        <button class="btn-primary" onclick="alert('Edit feature — add to receipts')">+ Add to Receipt</button>
+      </div>
+    `;
+    document.getElementById('detailPanel').classList.add('open');
+  }
+
+  function closeDetail() {
+    document.getElementById('detailPanel').classList.remove('open');
+  }
+
+  function openAddModal() {
+    document.getElementById('addModal').classList.add('show');
+  }
+
+  function closeModal() {
+    document.getElementById('addModal').classList.remove('show');
+  }
+
+  function addProduct() {
+    const name = document.getElementById('f-name').value.trim();
+    const sku = document.getElementById('f-sku').value.trim();
+    const cat = document.getElementById('f-cat').value;
+    const unit = document.getElementById('f-unit').value;
+    const stock = parseInt(document.getElementById('f-stock').value) || 0;
+    const warehouse = document.getElementById('f-warehouse').value.split(' ')[0];
+    const reorder = parseInt(document.getElementById('f-reorder').value) || 10;
+
+    if (!name || !sku || !cat) { alert('Please fill in name, SKU and category'); return; }
+
+    products.unshift({ name, sku, cat, unit, stock, location: warehouse, reorder, history: [`+${stock} Initial Stock`] });
+    filtered = [...products];
+    renderTable();
+    closeModal();
+  }
+
+  renderTable();
+
+  // Starfield
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  let mouse = { x: window.innerWidth/2, y: window.innerHeight/2 };
+
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+
+  function createStars() {
+    stars = [];
+    for (let i = 0; i < 180; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.4 + 0.2,
+        depth: Math.random() * 3 + 1,
+        opacity: Math.random() * 0.7 + 0.2,
+        tw: Math.random() * 0.01 + 0.003,
+        twd: Math.random() > 0.5 ? 1 : -1,
+      });
+    }
+  }
+
+  window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      const ox = (mouse.x - canvas.width/2) / (canvas.width/2) * s.depth * 5;
+      const oy = (mouse.y - canvas.height/2) / (canvas.height/2) * s.depth * 5;
+      s.opacity += s.tw * s.twd;
+      if (s.opacity >= 1 || s.opacity <= 0.1) s.twd *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x + ox, s.y + oy, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${s.opacity})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+
+  resize(); createStars(); draw();
+  window.addEventListener('resize', () => { resize(); createStars(); });
+</script>
+
+</body>
+</html>

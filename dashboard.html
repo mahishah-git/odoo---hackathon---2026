@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISRO Inventory — Dashboard</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #05060f;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+
+    canvas#stars {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    .ui {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    /* ── Navbar ── */
+    .navbar {
+      background: rgba(13,18,36,0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(255,255,255,0.07);
+      padding: 0 20px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .nav-logo {
+      font-size: 15px;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 1px;
+    }
+
+    .nav-logo span { color: #e8631a; }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-pill {
+      background: rgba(232,99,26,0.15);
+      border: 1px solid rgba(232,99,26,0.3);
+      color: #e8631a;
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    .nav-icon {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.1);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .notif-count {
+      position: absolute;
+      top: -4px; right: -4px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 9px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700;
+    }
+
+    /* ── Body ── */
+    .body {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 54px;
+      background: rgba(8,12,28,0.7);
+      backdrop-filter: blur(20px);
+      border-right: 1px solid rgba(255,255,255,0.06);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+
+    .si {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+
+    .si:hover { background: rgba(255,255,255,0.06); }
+    .si.active { background: rgba(232,99,26,0.2); border: 1px solid rgba(232,99,26,0.35); }
+    .si-gap { flex: 1; }
+
+    /* ── Main content ── */
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 10px;
+      overflow: hidden;
+    }
+
+    .glass {
+      background: rgba(255,255,255,0.04);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 14px;
+    }
+
+    /* ── Mission card ── */
+    .mission {
+      padding: 16px 20px;
+      border: 1px solid rgba(232,99,26,0.2) !important;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .m-left { display: flex; align-items: center; gap: 16px; }
+    .m-icon { font-size: 36px; }
+    .m-title { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 5px; }
+    .m-sub { font-size: 10px; color: #8899aa; line-height: 1.7; }
+
+    .m-right { display: flex; gap: 20px; align-items: center; }
+
+    .m-stat { text-align: center; }
+    .m-stat-num { font-size: 22px; font-weight: 700; color: #e8631a; }
+    .m-stat-label { font-size: 9px; color: #8899aa; margin-top: 2px; }
+
+    .m-countdown {
+      text-align: center;
+      background: rgba(232,99,26,0.1);
+      border: 1px solid rgba(232,99,26,0.25);
+      border-radius: 12px;
+      padding: 10px 16px;
+    }
+
+    .m-days { font-size: 28px; font-weight: 700; color: #e8631a; }
+    .m-days-label { font-size: 9px; color: #8899aa; margin-top: 2px; }
+
+    .m-badge {
+      background: rgba(34,197,94,0.12);
+      border: 1px solid rgba(34,197,94,0.3);
+      color: #22c55e;
+      font-size: 10px;
+      padding: 5px 14px;
+      border-radius: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      align-self: flex-start;
+    }
+
+    /* ── Alerts bar ── */
+    .alerts-bar {
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .alerts-title {
+      font-size: 9px;
+      color: #e8631a;
+      letter-spacing: 2px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .alerts-items {
+      display: flex;
+      gap: 8px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .alert-pill {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 5px 12px;
+      white-space: nowrap;
+      font-size: 10px;
+      color: #ccd6e8;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .alert-pill:hover { background: rgba(255,255,255,0.08); }
+
+    .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-red { background: #ef4444; }
+    .dot-amber { background: #f59e0b; }
+    .dot-green { background: #22c55e; }
+
+    /* ── Middle row ── */
+    .middle-row {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .todo {
+      width: 180px;
+      flex-shrink: 0;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+
+    .todo-title {
+      font-size: 9px;
+      color: #e8631a;
+      letter-spacing: 2px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .ti {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 8px;
+      padding: 7px 9px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: block;
+    }
+
+    .ti:hover {
+      background: rgba(232,99,26,0.1);
+      border-color: rgba(232,99,26,0.3);
+    }
+
+    .ti-tag { font-size: 8px; color: #e8631a; font-weight: 700; margin-bottom: 2px; letter-spacing: 0.5px; }
+    .ti-text { font-size: 10px; color: #ccd6e8; line-height: 1.4; }
+
+    .kpis {
+      flex: 1;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+    }
+
+    .kpi {
+      padding: 12px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .kpi:hover { background: rgba(255,255,255,0.07) !important; }
+
+    .kpi-label { font-size: 9px; color: #8899aa; margin-bottom: 6px; }
+    .kpi-num { font-size: 22px; font-weight: 700; color: #fff; line-height: 1; }
+    .kpi-sub { font-size: 9px; margin-top: 5px; }
+
+    .green { color: #22c55e; }
+    .amber { color: #f59e0b; }
+    .red { color: #ef4444; }
+    .muted { color: #8899aa; }
+
+    /* ── Chart ── */
+    .chart-box {
+      flex: 1;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    .chart-title {
+      font-size: 10px;
+      color: #8899aa;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .chart-wrap {
+      flex: 1;
+      position: relative;
+      min-height: 0;
+    }
+
+    /* ── Notification dropdown ── */
+    .notif-dropdown {
+      position: absolute;
+      top: 50px; right: 16px;
+      width: 300px;
+      background: rgba(13,18,36,0.95);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 14px;
+      z-index: 100;
+      display: none;
+    }
+
+    .notif-dropdown.show { display: block; }
+    .nd-title { font-size: 11px; color: #e8631a; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
+
+    .nd-item {
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      margin-bottom: 6px;
+      font-size: 11px;
+      color: #ccd6e8;
+      border-left: 3px solid;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="ui">
+
+  <!-- Navbar -->
+  <div class="navbar">
+    <div class="nav-logo">ISRO <span>INVENTORY</span></div>
+    <div class="nav-right">
+      <div class="nav-pill" id="rolePill">Supply Manager</div>
+      <div class="nav-icon" onclick="toggleNotif()">
+        🔔
+        <div class="notif-count">4</div>
+      </div>
+      <div class="nav-icon" onclick="window.location.href='profile.html'">👤</div>
+    </div>
+  </div>
+
+  <!-- Notification dropdown -->
+  <div class="notif-dropdown" id="notifDropdown">
+    <div class="nd-title">NOTIFICATIONS</div>
+    <div class="nd-item" style="border-color:#ef4444;">🔴 Cryogenic Nozzles critically low — 3 units left at AMD</div>
+    <div class="nd-item" style="border-color:#f59e0b;">🟡 Solar Panels need reorder — 8 units at TVM</div>
+    <div class="nd-item" style="border-color:#f59e0b;">🟡 Pending receipt #ISR-024 awaiting validation</div>
+    <div class="nd-item" style="border-color:#22c55e;">🟢 Titanium Bolts restocked — +50 units at BLR</div>
+  </div>
+
+  <div class="body">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <a class="si active" href="dashboard.html" title="Dashboard">📊</a>
+      <a class="si" href="products.html" title="Products">📦</a>
+      <a class="si" href="receipts.html" title="Receipts">📥</a>
+      <a class="si" href="delivery.html" title="Deliveries">🚚</a>
+      <a class="si" href="transfers.html" title="Transfers">🔄</a>
+      <a class="si" href="adjustments.html" title="Adjustments">📋</a>
+      <a class="si" href="history.html" title="Move History">🕐</a>
+      <div class="si-gap"></div>
+      <a class="si" href="settings.html" title="Settings">⚙️</a>
+      <a class="si" href="profile.html" title="Profile">👤</a>
+    </div>
+
+    <!-- Main content -->
+    <div class="content">
+
+      <!-- Gaganyaan mission card -->
+      <div class="glass mission">
+        <div class="m-left">
+          <div class="m-icon">🚀</div>
+          <div>
+            <div class="m-title">Gaganyaan — Crewed Mission</div>
+            <div class="m-sub">
+              India's first human spaceflight program<br>
+              Commander: Shubhanshu Shukla · Crew: 3 Vyomnauts<br>
+              Facilities: BLR · TVM · AMD · SHR
+            </div>
+          </div>
+        </div>
+        <div class="m-right">
+          <div class="m-stat">
+            <div class="m-stat-num">847</div>
+            <div class="m-stat-label">Components</div>
+          </div>
+          <div class="m-stat">
+            <div class="m-stat-num">4</div>
+            <div class="m-stat-label">Warehouses</div>
+          </div>
+          <div class="m-stat">
+            <div class="m-stat-num" style="color:#ef4444;">23</div>
+            <div class="m-stat-label">Stock Alerts</div>
+          </div>
+          <div class="m-countdown">
+            <div class="m-days" id="daysLeft">142</div>
+            <div class="m-days-label">Days to launch</div>
+          </div>
+          <div class="m-badge">● ACTIVE</div>
+        </div>
+      </div>
+
+      <!-- Alerts bar -->
+      <div class="glass alerts-bar">
+        <div class="alerts-title">⚡ ALERTS</div>
+        <div class="alerts-items">
+          <div class="alert-pill" onclick="window.location.href='adjustments.html'">
+            <div class="dot dot-red"></div>Cryogenic Nozzles — 3 left
+          </div>
+          <div class="alert-pill" onclick="window.location.href='products.html'">
+            <div class="dot dot-amber"></div>Solar Panels — reorder needed
+          </div>
+          <div class="alert-pill" onclick="window.location.href='receipts.html'">
+            <div class="dot dot-amber"></div>Receipt #ISR-024 pending
+          </div>
+          <div class="alert-pill">
+            <div class="dot dot-green"></div>Titanium Bolts restocked +50
+          </div>
+        </div>
+      </div>
+
+      <!-- Middle row: To-do + KPIs -->
+      <div class="middle-row">
+        <div class="glass todo">
+          <div class="todo-title">TO-DO</div>
+          <a class="ti" href="receipts.html">
+            <div class="ti-tag">RECEIPT</div>
+            <div class="ti-text">Validate 50 Titanium Bolts — AMD</div>
+          </a>
+          <a class="ti" href="products.html">
+            <div class="ti-tag">LOW STOCK</div>
+            <div class="ti-text">Cryogenic Nozzles critical</div>
+          </a>
+          <a class="ti" href="transfers.html">
+            <div class="ti-tag">TRANSFER</div>
+            <div class="ti-text">Solar Panels → Production Floor</div>
+          </a>
+          <a class="ti" href="delivery.html">
+            <div class="ti-tag">DELIVERY</div>
+            <div class="ti-text">Pack order for Sriharikota</div>
+          </a>
+          <a class="ti" href="adjustments.html">
+            <div class="ti-tag">ADJUST</div>
+            <div class="ti-text">Count Rack B — BLR</div>
+          </a>
+        </div>
+
+        <div class="kpis">
+          <div class="glass kpi" onclick="window.location.href='products.html'">
+            <div class="kpi-label">Total components</div>
+            <div class="kpi-num">1,284</div>
+            <div class="kpi-sub green">↑ 12 received today</div>
+          </div>
+          <div class="glass kpi" onclick="window.location.href='products.html'">
+            <div class="kpi-label">Low / out of stock</div>
+            <div class="kpi-num amber">23</div>
+            <div class="kpi-sub red">↑ 3 new alerts</div>
+          </div>
+          <div class="glass kpi" onclick="window.location.href='receipts.html'">
+            <div class="kpi-label">Pending receipts</div>
+            <div class="kpi-num">8</div>
+            <div class="kpi-sub muted">Awaiting validation</div>
+          </div>
+          <div class="glass kpi" onclick="window.location.href='delivery.html'">
+            <div class="kpi-label">Pending deliveries</div>
+            <div class="kpi-num">5</div>
+            <div class="kpi-sub amber">2 ready to dispatch</div>
+          </div>
+          <div class="glass kpi" onclick="window.location.href='transfers.html'">
+            <div class="kpi-label">Transfers scheduled</div>
+            <div class="kpi-num">3</div>
+            <div class="kpi-sub green">Scheduled today</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stock chart -->
+      <div class="glass chart-box">
+        <div class="chart-title">
+          <span>📈 Stock movement — last 7 days</span>
+          <span style="color:#e8631a;font-size:9px;">BLR · TVM · AMD · SHR</span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chartCanvas"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  // Role badge
+  const role = localStorage.getItem('isro_role');
+  if (role === 'technician') {
+    document.getElementById('rolePill').textContent = 'Field Technician';
+  }
+
+  // Days to launch counter
+  const launchDate = new Date('2026-08-15');
+  const today = new Date();
+  const diff = Math.ceil((launchDate - today) / (1000 * 60 * 60 * 24));
+  document.getElementById('daysLeft').textContent = diff > 0 ? diff : '0';
+
+  // Notification toggle
+  function toggleNotif() {
+    document.getElementById('notifDropdown').classList.toggle('show');
+  }
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.nav-icon') && !e.target.closest('.notif-dropdown')) {
+      document.getElementById('notifDropdown').classList.remove('show');
+    }
+  });
+
+  // Starfield
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+  let shootingStar = null;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function createStars() {
+    stars = [];
+    for (let i = 0; i < 200; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.5 + 0.2,
+        depth: Math.random() * 3 + 1,
+        opacity: Math.random() * 0.7 + 0.2,
+        tw: Math.random() * 0.012 + 0.003,
+        twd: Math.random() > 0.5 ? 1 : -1,
+      });
+    }
+  }
+
+  function spawnShootingStar() {
+    shootingStar = {
+      x: Math.random() * canvas.width * 0.7,
+      y: Math.random() * canvas.height * 0.3,
+      len: Math.random() * 120 + 80,
+      speed: Math.random() * 6 + 4,
+      opacity: 1,
+      angle: Math.PI / 5,
+    };
+  }
+
+  setTimeout(spawnShootingStar, 3000);
+  setInterval(spawnShootingStar, 8000);
+
+  window.addEventListener('mousemove', e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    stars.forEach(s => {
+      const ox = (mouse.x - canvas.width / 2) / (canvas.width / 2) * s.depth * 6;
+      const oy = (mouse.y - canvas.height / 2) / (canvas.height / 2) * s.depth * 6;
+      s.opacity += s.tw * s.twd;
+      if (s.opacity >= 1 || s.opacity <= 0.1) s.twd *= -1;
+      ctx.beginPath();
+      ctx.arc(s.x + ox, s.y + oy, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,255,255,${s.opacity})`;
+      ctx.fill();
+    });
+
+    if (shootingStar) {
+      const ss = shootingStar;
+      ctx.save();
+      ctx.globalAlpha = ss.opacity;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(ss.x, ss.y);
+      ctx.lineTo(ss.x - Math.cos(ss.angle) * ss.len, ss.y - Math.sin(ss.angle) * ss.len);
+      ctx.stroke();
+      ctx.restore();
+      ss.x += Math.cos(ss.angle) * ss.speed;
+      ss.y += Math.sin(ss.angle) * ss.speed;
+      ss.opacity -= 0.018;
+      if (ss.opacity <= 0) shootingStar = null;
+    }
+
+    requestAnimationFrame(draw);
+  }
+
+  resize(); createStars(); draw();
+  window.addEventListener('resize', () => { resize(); createStars(); });
+
+  // Chart
+  new Chart(document.getElementById('chartCanvas'), {
+    type: 'line',
+    data: {
+      labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+      datasets: [
+        {
+          label: 'Stock in',
+          data: [45, 62, 38, 71, 55, 48, 66],
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34,197,94,0.06)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#22c55e',
+          fill: true,
+          tension: 0.4
+        },
+        {
+          label: 'Stock out',
+          data: [20, 15, 30, 10, 25, 8, 12],
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239,68,68,0.06)',
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#ef4444',
+          fill: true,
+          tension: 0.4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          labels: { color: '#8899aa', font: { size: 10 }, boxWidth: 12 }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8899aa', font: { size: 9 } },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { display: false }
+        },
+        y: {
+          ticks: { color: '#8899aa', font: { size: 9 } },
+          grid: { color: 'rgba(255,255,255,0.04)' },
+          border: { display: false }
+        }
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

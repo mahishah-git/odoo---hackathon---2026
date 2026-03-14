@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISRO Inventory — Move History</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #05060f; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; }
+    canvas#stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+    .ui { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
+
+    .navbar { background: rgba(13,18,36,0.6); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 0 20px; height: 50px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .nav-logo { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+    .nav-logo span { color: #e8631a; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-pill { background: rgba(232,99,26,0.15); border: 1px solid rgba(232,99,26,0.3); color: #e8631a; font-size: 11px; padding: 4px 12px; border-radius: 20px; }
+    .nav-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; position: relative; }
+    .notif-count { position: absolute; top: -4px; right: -4px; background: #ef4444; color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+
+    .body { display: flex; flex: 1; overflow: hidden; }
+    .sidebar { width: 54px; background: rgba(8,12,28,0.7); backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 6px; flex-shrink: 0; }
+    .si { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+    .si:hover { background: rgba(255,255,255,0.06); }
+    .si.active { background: rgba(232,99,26,0.2); border: 1px solid rgba(232,99,26,0.35); }
+    .si-gap { flex: 1; }
+
+    .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
+    .main { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 12px; overflow: hidden; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .page-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .page-title span { color: #e8631a; }
+
+    .btn-export { background: rgba(255,255,255,0.06); color: #e2e8f0; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-export:hover { background: rgba(255,255,255,0.1); }
+
+    .stats-row { display: flex; gap: 10px; flex-shrink: 0; }
+    .stat-card { flex: 1; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+    .stat-icon { font-size: 22px; }
+    .stat-num { font-size: 20px; font-weight: 700; color: #fff; line-height: 1; }
+    .stat-label { font-size: 10px; color: #8899aa; margin-top: 2px; }
+
+    .filters { display: flex; gap: 8px; flex-shrink: 0; align-items: center; flex-wrap: wrap; }
+    .filter-pill { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 6px 14px; font-size: 11px; color: #8899aa; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .filter-pill:hover, .filter-pill.active { background: rgba(232,99,26,0.15); border-color: rgba(232,99,26,0.4); color: #e8631a; }
+    .search-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 6px 16px; font-size: 11px; color: #e2e8f0; outline: none; width: 200px; margin-left: auto; }
+    .search-box::placeholder { color: #4a5a7a; }
+    .search-box:focus { border-color: rgba(232,99,26,0.4); }
+
+    .table-wrap { flex: 1; overflow-y: auto; }
+    .table-wrap::-webkit-scrollbar { width: 4px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 10px 14px; text-align: left; font-size: 9px; color: #8899aa; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); position: sticky; top: 0; background: rgba(8,12,28,0.95); backdrop-filter: blur(20px); }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+    tbody tr:hover { background: rgba(255,255,255,0.03); }
+    tbody td { padding: 10px 14px; font-size: 12px; color: #ccd6e8; }
+
+    .type-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+    .type-receipt  { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  color: #22c55e; }
+    .type-delivery { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3);  color: #ef4444; }
+    .type-transfer { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: #3b82f6; }
+    .type-adjust   { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.3); color: #f59e0b; }
+
+    .qty-pos { color: #22c55e; font-weight: 700; }
+    .qty-neg { color: #ef4444; font-weight: 700; }
+    .qty-neu { color: #3b82f6; font-weight: 700; }
+
+    .timeline-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="ui">
+  <div class="navbar">
+    <div class="nav-logo">ISRO <span>INVENTORY</span></div>
+    <div class="nav-right">
+      <div class="nav-pill" id="rolePill">Supply Manager</div>
+      <div class="nav-icon">🔔<div class="notif-count">4</div></div>
+      <div class="nav-icon" onclick="window.location.href='profile.html'">👤</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="sidebar">
+      <a class="si" href="dashboard.html">📊</a>
+      <a class="si" href="products.html">📦</a>
+      <a class="si" href="receipts.html">📥</a>
+      <a class="si" href="delivery.html">🚚</a>
+      <a class="si" href="transfers.html">🔄</a>
+      <a class="si" href="adjustments.html">📋</a>
+      <a class="si active" href="history.html">🕐</a>
+      <div class="si-gap"></div>
+      <a class="si" href="settings.html">⚙️</a>
+      <a class="si" href="profile.html">👤</a>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <div class="page-title">🕐 <span>Move History</span></div>
+          <div style="font-size:11px;color:#8899aa;margin-top:2px;">Complete stock ledger — every movement logged</div>
+        </div>
+        <button class="btn-export" onclick="showToast('📥 Exporting ledger...')">⬇ Export Ledger</button>
+      </div>
+
+      <div class="stats-row">
+        <div class="glass stat-card">
+          <div class="stat-icon">📜</div>
+          <div><div class="stat-num">41</div><div class="stat-label">Total Movements</div></div>
+        </div>
+        <div class="glass stat-card">
+          <div class="stat-icon">📥</div>
+          <div><div class="stat-num" style="color:#22c55e;">+247</div><div class="stat-label">Units In</div></div>
+        </div>
+        <div class="glass stat-card">
+          <div class="stat-icon">📤</div>
+          <div><div class="stat-num" style="color:#ef4444;">-873</div><div class="stat-label">Units Out</div></div>
+        </div>
+        <div class="glass stat-card">
+          <div class="stat-icon">🔄</div>
+          <div><div class="stat-num" style="color:#3b82f6;">11</div><div class="stat-label">Transfers</div></div>
+        </div>
+      </div>
+
+      <div class="filters">
+        <div class="filter-pill active" onclick="filterType('all',this)">All</div>
+        <div class="filter-pill" onclick="filterType('Receipt',this)">📥 Receipts</div>
+        <div class="filter-pill" onclick="filterType('Delivery',this)">🚚 Deliveries</div>
+        <div class="filter-pill" onclick="filterType('Transfer',this)">🔄 Transfers</div>
+        <div class="filter-pill" onclick="filterType('Adjustment',this)">📋 Adjustments</div>
+        <div class="filter-pill" onclick="filterWarehouse('BLR',this)">BLR</div>
+        <div class="filter-pill" onclick="filterWarehouse('TVM',this)">TVM</div>
+        <div class="filter-pill" onclick="filterWarehouse('AMD',this)">AMD</div>
+        <div class="filter-pill" onclick="filterWarehouse('SHR',this)">SHR</div>
+        <input class="search-box" type="text" placeholder="🔍  Search component or person..." oninput="searchHistory(this.value)"/>
+      </div>
+
+      <div class="glass table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Date & Time</th>
+              <th>Type</th>
+              <th>Component</th>
+              <th>Qty Change</th>
+              <th>From → To</th>
+              <th>Mission</th>
+              <th>By</th>
+              <th>Ref ID</th>
+            </tr>
+          </thead>
+          <tbody id="historyTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const role = localStorage.getItem('isro_role');
+  if (role === 'technician') document.getElementById('rolePill').textContent = 'Field Technician';
+
+  const history = [
+    { date:'2026-03-14 09:22', type:'Receipt',    product:'Titanium Heat Shield',      qty:'+50',  from:'Vendor — Walchandnagar', to:'BLR — Main Store',    mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ISR-008' },
+    { date:'2026-03-14 08:45', type:'Transfer',   product:'Oxygen Canister',           qty:'15',   from:'TVM — Main Store',       to:'TVM — Assembly Floor',mission:'Gaganyaan Crewed', by:'Field Technician — TVM',   ref:'TRF-011' },
+    { date:'2026-03-13 17:30', type:'Delivery',   product:'Cryogenic Engine Nozzle',   qty:'-8',   from:'BLR — Main Store',       to:'VSSC',                mission:'Gaganyaan Crewed', by:'Field Technician — BLR',   ref:'DEL-009' },
+    { date:'2026-03-13 16:10', type:'Delivery',   product:'Parachute Assembly',        qty:'-2',   from:'TVM — Main Store',       to:'Mission Integration', mission:'Gaganyaan Crewed', by:'Field Technician — TVM',   ref:'DEL-010' },
+    { date:'2026-03-12 14:55', type:'Adjustment', product:'Space Suit',                qty:'0',    from:'TVM — Assembly Floor',   to:'TVM — Assembly Floor',mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ADJ-009' },
+    { date:'2026-03-12 13:20', type:'Transfer',   product:'Reaction Wheel',            qty:'5',    from:'BLR — Rack B',           to:'TVM — Assembly Floor',mission:'NISAR',            by:'Field Technician — TVM',   ref:'TRF-008' },
+    { date:'2026-03-11 11:40', type:'Adjustment', product:'Carbon Fibre Panel',        qty:'+4',   from:'AMD — Main Store',       to:'AMD — Main Store',    mission:'Gaganyaan Crewed', by:'Field Technician — AMD',   ref:'ADJ-008' },
+    { date:'2026-03-11 10:15', type:'Transfer',   product:'Liquid Hydrogen Fuel',      qty:'200',  from:'SHR — Propellant Bay',   to:'SHR — Launch Pad',   mission:'Gaganyaan Crewed', by:'Field Technician — SHR',   ref:'TRF-007' },
+    { date:'2026-03-11 09:00', type:'Adjustment', product:'Hydraulic Pump',            qty:'-1',   from:'BLR — Main Store',       to:'BLR — Main Store',    mission:'General Stock',    by:'Field Technician — BLR',   ref:'ADJ-007' },
+    { date:'2026-03-10 16:45', type:'Delivery',   product:'Thermal Blanket',           qty:'-15',  from:'AMD — Main Store',       to:'DRDO Testing',        mission:'General Stock',    by:'Field Technician — AMD',   ref:'DEL-007' },
+    { date:'2026-03-10 15:20', type:'Delivery',   product:'Liquid Hydrogen Fuel',      qty:'-500', from:'SHR — Propellant Bay',   to:'Sriharikota Launch',  mission:'Gaganyaan Crewed', by:'Field Technician — SHR',   ref:'DEL-006' },
+    { date:'2026-03-09 14:10', type:'Adjustment', product:'Solar Panel Satellite',     qty:'-2',   from:'BLR — Main Store',       to:'BLR — Main Store',    mission:'NISAR',            by:'Supply Manager',           ref:'ADJ-006' },
+    { date:'2026-03-09 12:30', type:'Receipt',    product:'Reaction Wheel',            qty:'+20',  from:'Vendor — L&T Aerospace', to:'TVM — Main Store',    mission:'NISAR',            by:'Supply Manager',           ref:'ISR-007' },
+    { date:'2026-03-09 11:00', type:'Receipt',    product:'Star Tracker Sensor',       qty:'+15',  from:'Vendor — L&T Aerospace', to:'TVM — Main Store',    mission:'NISAR',            by:'Supply Manager',           ref:'ISR-007' },
+    { date:'2026-03-08 15:50', type:'Delivery',   product:'Carbon Fibre Panel',        qty:'-20',  from:'AMD — Main Store',       to:'HAL Assembly',        mission:'Gaganyaan Crewed', by:'Field Technician — AMD',   ref:'DEL-005' },
+    { date:'2026-03-08 14:20', type:'Adjustment', product:'Gyroscope Sensor',          qty:'+2',   from:'BLR — Rack A',           to:'BLR — Rack A',        mission:'NISAR',            by:'Field Technician — BLR',   ref:'ADJ-005' },
+    { date:'2026-03-08 10:00', type:'Receipt',    product:'Thermal Blanket',           qty:'+60',  from:'Vendor — Walchandnagar', to:'AMD — Main Store',    mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ISR-008' },
+    { date:'2026-03-07 16:30', type:'Delivery',   product:'Solar Panel Satellite',     qty:'-8',   from:'BLR — Main Store',       to:'ISRO HQ Bengaluru',   mission:'NISAR',            by:'Field Technician — BLR',   ref:'DEL-004' },
+    { date:'2026-03-07 15:10', type:'Delivery',   product:'Gyroscope Sensor',          qty:'-4',   from:'BLR — Main Store',       to:'ISRO HQ Bengaluru',   mission:'NISAR',            by:'Field Technician — BLR',   ref:'DEL-004' },
+    { date:'2026-03-07 13:00', type:'Transfer',   product:'Titanium Heat Shield',      qty:'15',   from:'TVM — Main Store',       to:'SHR — Launch Pad',   mission:'Gaganyaan Crewed', by:'Field Technician — TVM',   ref:'TRF-005' },
+    { date:'2026-03-06 14:40', type:'Transfer',   product:'Gyroscope Sensor',          qty:'10',   from:'BLR — Rack A',           to:'BLR — Rack B',        mission:'NISAR',            by:'Field Technician — BLR',   ref:'TRF-004' },
+    { date:'2026-03-06 12:20', type:'Adjustment', product:'Parachute Assembly',        qty:'-2',   from:'BLR — Main Store',       to:'BLR — Main Store',    mission:'Gaganyaan Crewed', by:'Field Technician — BLR',   ref:'ADJ-004' },
+    { date:'2026-03-05 15:00', type:'Delivery',   product:'Parachute Assembly',        qty:'-2',   from:'BLR — Main Store',       to:'Mission Integration', mission:'Gaganyaan Crewed', by:'Field Technician — BLR',   ref:'DEL-003' },
+    { date:'2026-03-05 13:30', type:'Transfer',   product:'Carbon Fibre Panel',        qty:'30',   from:'AMD — Main Store',       to:'BLR — Production',    mission:'Gaganyaan Crewed', by:'Field Technician — AMD',   ref:'TRF-003' },
+    { date:'2026-03-04 11:10', type:'Adjustment', product:'Oxygen Canister',           qty:'-5',   from:'TVM — Assembly Floor',   to:'TVM — Assembly Floor',mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ADJ-002' },
+    { date:'2026-03-03 16:50', type:'Delivery',   product:'Space Suit',                qty:'-3',   from:'TVM — Main Store',       to:'VSSC',                mission:'Gaganyaan Crewed', by:'Field Technician — TVM',   ref:'DEL-002' },
+    { date:'2026-03-03 15:20', type:'Delivery',   product:'Oxygen Canister',           qty:'-10',  from:'TVM — Main Store',       to:'VSSC',                mission:'Gaganyaan Crewed', by:'Field Technician — TVM',   ref:'DEL-002' },
+    { date:'2026-03-03 13:00', type:'Transfer',   product:'Space Suit',                qty:'3',    from:'TVM — Main Store',       to:'TVM — Assembly Floor',mission:'Gaganyaan Crewed', by:'Field Technician — TVM',   ref:'TRF-002' },
+    { date:'2026-03-03 11:30', type:'Transfer',   product:'Parachute Assembly',        qty:'2',    from:'TVM — Main Store',       to:'TVM — Assembly Floor',mission:'Gaganyaan Crewed', by:'Field Technician — TVM',   ref:'TRF-002' },
+    { date:'2026-03-03 10:00', type:'Receipt',    product:'Space Suit',                qty:'+6',   from:'Vendor — DRDO',          to:'TVM — Main Store',    mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ISR-003' },
+    { date:'2026-03-02 14:30', type:'Adjustment', product:'Cryogenic Engine Nozzle',   qty:'-3',   from:'BLR — Rack A',           to:'BLR — Rack A',        mission:'Gaganyaan Crewed', by:'Field Technician — BLR',   ref:'ADJ-001' },
+    { date:'2026-03-01 16:00', type:'Delivery',   product:'Cryogenic Engine Nozzle',   qty:'-5',   from:'BLR — Main Store',       to:'Sriharikota Launch',  mission:'Gaganyaan Crewed', by:'Field Technician — BLR',   ref:'DEL-001' },
+    { date:'2026-03-01 15:00', type:'Delivery',   product:'Titanium Heat Shield',      qty:'-10',  from:'BLR — Main Store',       to:'Sriharikota Launch',  mission:'Gaganyaan Crewed', by:'Field Technician — BLR',   ref:'DEL-001' },
+    { date:'2026-03-01 13:30', type:'Transfer',   product:'Cryogenic Engine Nozzle',   qty:'5',    from:'BLR — Main Store',       to:'SHR — Launch Pad',   mission:'Gaganyaan Crewed', by:'Field Technician — BLR',   ref:'TRF-001' },
+    { date:'2026-03-01 11:00', type:'Receipt',    product:'Cryogenic Engine Nozzle',   qty:'+12',  from:'Vendor — HAL',           to:'BLR — Main Store',    mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ISR-001' },
+    { date:'2026-03-01 11:00', type:'Receipt',    product:'Hydraulic Pump',            qty:'+5',   from:'Vendor — HAL',           to:'BLR — Main Store',    mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ISR-001' },
+    { date:'2026-03-01 09:30', type:'Receipt',    product:'Carbon Fibre Panel',        qty:'+50',  from:'Vendor — L&T Aerospace', to:'AMD — Main Store',    mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ISR-002' },
+    { date:'2026-03-01 09:30', type:'Receipt',    product:'Titanium Heat Shield',      qty:'+20',  from:'Vendor — L&T Aerospace', to:'AMD — Main Store',    mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ISR-002' },
+    { date:'2026-03-01 08:00', type:'Receipt',    product:'Solar Panel Satellite',     qty:'+20',  from:'Vendor — BEL',           to:'BLR — Main Store',    mission:'NISAR',            by:'Supply Manager',           ref:'ISR-005' },
+    { date:'2026-03-01 08:00', type:'Receipt',    product:'Gyroscope Sensor',          qty:'+10',  from:'Vendor — BEL',           to:'BLR — Main Store',    mission:'NISAR',            by:'Supply Manager',           ref:'ISR-005' },
+    { date:'2026-02-28 17:00', type:'Receipt',    product:'Parachute Assembly',        qty:'+6',   from:'Vendor — Godrej Aero',   to:'BLR — Main Store',    mission:'Gaganyaan Crewed', by:'Supply Manager',           ref:'ISR-006' },
+  ];
+
+  let filtered = [...history];
+  let activeType = 'all';
+  let activeWarehouse = null;
+  let searchQuery = '';
+
+  function applyFilters() {
+    filtered = history.filter(h => {
+      const typeOk = activeType === 'all' || h.type === activeType;
+      const whOk = !activeWarehouse || h.from.includes(activeWarehouse) || h.to.includes(activeWarehouse);
+      const q = searchQuery.toLowerCase();
+      const searchOk = !q || h.product.toLowerCase().includes(q) || h.by.toLowerCase().includes(q) || h.ref.toLowerCase().includes(q);
+      return typeOk && whOk && searchOk;
+    });
+    renderTable();
+  }
+
+  function filterType(type, el) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    activeType = type;
+    activeWarehouse = null;
+    applyFilters();
+  }
+
+  function filterWarehouse(wh, el) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    activeWarehouse = wh;
+    activeType = 'all';
+    applyFilters();
+  }
+
+  function searchHistory(q) {
+    searchQuery = q;
+    applyFilters();
+  }
+
+  function typeBadge(type) {
+    const map = { Receipt:'type-receipt', Delivery:'type-delivery', Transfer:'type-transfer', Adjustment:'type-adjust' };
+    const icons = { Receipt:'📥', Delivery:'🚚', Transfer:'🔄', Adjustment:'📋' };
+    return `<span class="type-badge ${map[type]}">${icons[type]} ${type}</span>`;
+  }
+
+  function qtyDisplay(qty, type) {
+    if (type === 'Transfer') return `<span class="qty-neu">${qty}</span>`;
+    if (qty.startsWith('+')) return `<span class="qty-pos">${qty}</span>`;
+    if (qty.startsWith('-')) return `<span class="qty-neg">${qty}</span>`;
+    return `<span style="color:#8899aa;">${qty}</span>`;
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('historyTable');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#4a5a7a;padding:40px;">No records found</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map(h => `
+      <tr>
+        <td style="color:#8899aa;font-size:11px;white-space:nowrap;">${h.date}</td>
+        <td>${typeBadge(h.type)}</td>
+        <td style="color:#e2e8f0;font-weight:600;">${h.product}</td>
+        <td>${qtyDisplay(h.qty, h.type)}</td>
+        <td style="font-size:11px;color:#8899aa;">
+          <span style="color:#ccd6e8;">${h.from.split('—')[0].trim()}</span>
+          <span style="color:#4a5a7a;"> → </span>
+          <span style="color:#ccd6e8;">${h.to.split('—')[0].trim()}</span>
+        </td>
+        <td style="font-size:11px;color:#8899aa;">${h.mission}</td>
+        <td style="font-size:11px;color:#8899aa;">${h.by.replace('Field Technician — ','FT-')}</td>
+        <td style="font-family:monospace;font-size:11px;color:#e8631a;">${h.ref}</td>
+      </tr>
+    `).join('');
+  }
+
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(13,18,36,0.95);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;padding:12px 24px;border-radius:12px;font-size:13px;z-index:999;backdrop-filter:blur(20px);';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  renderTable();
+
+  // Starfield
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [], mouse = { x: window.innerWidth/2, y: window.innerHeight/2 };
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function createStars() { stars = []; for(let i=0;i<180;i++) stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.4+0.2,depth:Math.random()*3+1,opacity:Math.random()*0.7+0.2,tw:Math.random()*0.01+0.003,twd:Math.random()>0.5?1:-1}); }
+  window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+  function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); stars.forEach(s=>{const ox=(mouse.x-canvas.width/2)/(canvas.width/2)*s.depth*5;const oy=(mouse.y-canvas.height/2)/(canvas.height/2)*s.depth*5;s.opacity+=s.tw*s.twd;if(s.opacity>=1||s.opacity<=0.1)s.twd*=-1;ctx.beginPath();ctx.arc(s.x+ox,s.y+oy,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${s.opacity})`;ctx.fill();}); requestAnimationFrame(draw); }
+  resize(); createStars(); draw();
+  window.addEventListener('resize',()=>{resize();createStars();});
+</script>
+
+</body>
+</html>

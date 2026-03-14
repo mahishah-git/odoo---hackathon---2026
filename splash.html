@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISRO Inventory</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: #05060f;
+      height: 100vh;
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    canvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+    }
+
+    .content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      opacity: 0;
+      animation: fadeIn 2s ease forwards;
+      animation-delay: 0.5s;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .logo {
+      font-size: 52px;
+      font-weight: 700;
+      color: #ffffff;
+      letter-spacing: 2px;
+    }
+
+    .logo span {
+      color: #e8631a;
+    }
+
+    .tagline {
+      margin-top: 16px;
+      font-size: 15px;
+      color: #8899aa;
+      font-style: italic;
+      letter-spacing: 0.5px;
+    }
+
+    .loader {
+      margin: 36px auto 0;
+      width: 180px;
+      height: 2px;
+      background: #1a2a3a;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .loader-bar {
+      height: 100%;
+      width: 0%;
+      background: #e8631a;
+      border-radius: 2px;
+      animation: load 2.8s ease forwards;
+      animation-delay: 0.8s;
+    }
+
+    @keyframes load {
+      0%   { width: 0%; }
+      100% { width: 100%; }
+    }
+
+    .entering {
+      margin-top: 20px;
+      font-size: 11px;
+      color: #2a3a4a;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      animation: blink 1.2s ease infinite;
+      animation-delay: 2s;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 0.3; }
+      50%       { opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <canvas id="stars"></canvas>
+
+  <div class="content">
+    <div class="logo">ISRO <span>INVENTORY</span></div>
+    <div class="tagline">Built for the ones who never make headlines.</div>
+    <div class="loader"><div class="loader-bar"></div></div>
+    <div class="entering">Initializing mission systems...</div>
+  </div>
+
+  <script>
+    // ── Starfield ──────────────────────────────────────────────
+    const canvas = document.getElementById('stars');
+    const ctx = canvas.getContext('2d');
+    let stars = [];
+    let mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+
+    function createStars() {
+      stars = [];
+      for (let i = 0; i < 200; i++) {
+        stars.push({
+          x: Math.random() * canvas.width,
+          y: Math.random() * canvas.height,
+          r: Math.random() * 1.5 + 0.3,
+          depth: Math.random() * 3 + 1,
+          opacity: Math.random() * 0.8 + 0.2,
+          twinkle: Math.random() * 0.02 + 0.005,
+          twinkleDir: Math.random() > 0.5 ? 1 : -1,
+        });
+      }
+    }
+
+    // Shooting star
+    let shootingStar = null;
+    function spawnShootingStar() {
+      shootingStar = {
+        x: Math.random() * canvas.width * 0.7,
+        y: Math.random() * canvas.height * 0.3,
+        len: Math.random() * 120 + 80,
+        speed: Math.random() * 6 + 4,
+        opacity: 1,
+        angle: Math.PI / 5,
+      };
+    }
+    setTimeout(spawnShootingStar, 2000);
+    setInterval(spawnShootingStar, 6000);
+
+    window.addEventListener('mousemove', e => {
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+    });
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      stars.forEach(s => {
+        // Parallax offset
+        const offsetX = (mouse.x - canvas.width / 2) / (canvas.width / 2) * s.depth * 6;
+        const offsetY = (mouse.y - canvas.height / 2) / (canvas.height / 2) * s.depth * 6;
+
+        // Twinkle
+        s.opacity += s.twinkle * s.twinkleDir;
+        if (s.opacity >= 1 || s.opacity <= 0.1) s.twinkleDir *= -1;
+
+        ctx.beginPath();
+        ctx.arc(s.x + offsetX, s.y + offsetY, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${s.opacity})`;
+        ctx.fill();
+      });
+
+      // Draw shooting star
+      if (shootingStar) {
+        const ss = shootingStar;
+        ctx.save();
+        ctx.globalAlpha = ss.opacity;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(ss.x, ss.y);
+        ctx.lineTo(ss.x - Math.cos(ss.angle) * ss.len, ss.y - Math.sin(ss.angle) * ss.len);
+        ctx.stroke();
+        ctx.restore();
+
+        ss.x += Math.cos(ss.angle) * ss.speed;
+        ss.y += Math.sin(ss.angle) * ss.speed;
+        ss.opacity -= 0.018;
+        if (ss.opacity <= 0) shootingStar = null;
+      }
+
+      requestAnimationFrame(draw);
+    }
+
+    resize();
+    createStars();
+    draw();
+    window.addEventListener('resize', () => { resize(); createStars(); });
+
+    // ── Auto redirect after 4 seconds ─────────────────────────
+    setTimeout(() => {
+      window.location.href = 'role-select.html';
+    }, 4000);
+  </script>
+
+</body>
+</html>

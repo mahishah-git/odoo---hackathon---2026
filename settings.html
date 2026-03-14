@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISRO Inventory — Settings</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #05060f; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; }
+    canvas#stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+    .ui { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
+
+    .navbar { background: rgba(13,18,36,0.6); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 0 20px; height: 50px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .nav-logo { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+    .nav-logo span { color: #e8631a; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-pill { background: rgba(232,99,26,0.15); border: 1px solid rgba(232,99,26,0.3); color: #e8631a; font-size: 11px; padding: 4px 12px; border-radius: 20px; }
+    .nav-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; position: relative; }
+    .notif-count { position: absolute; top: -4px; right: -4px; background: #ef4444; color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+
+    .body { display: flex; flex: 1; overflow: hidden; }
+    .sidebar { width: 54px; background: rgba(8,12,28,0.7); backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 6px; flex-shrink: 0; }
+    .si { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+    .si:hover { background: rgba(255,255,255,0.06); }
+    .si.active { background: rgba(232,99,26,0.2); border: 1px solid rgba(232,99,26,0.35); }
+    .si-gap { flex: 1; }
+
+    .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
+    .main { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 12px; overflow-y: auto; }
+    .main::-webkit-scrollbar { width: 4px; }
+    .main::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .page-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .page-title span { color: #e8631a; }
+
+    .manager-only { background: rgba(232,99,26,0.08); border: 1px solid rgba(232,99,26,0.2); border-radius: 10px; padding: 10px 16px; display: flex; align-items: center; gap: 10px; font-size: 12px; color: #e8631a; flex-shrink: 0; }
+
+    .section-title { font-size: 11px; color: #e8631a; letter-spacing: 2px; font-weight: 700; margin-bottom: 10px; }
+
+    .warehouses-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+
+    .warehouse-card { padding: 18px; cursor: pointer; transition: all 0.2s; }
+    .warehouse-card:hover { background: rgba(255,255,255,0.06) !important; }
+
+    .wh-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .wh-code { font-size: 22px; font-weight: 700; color: #e8631a; }
+    .wh-status { background: rgba(34,197,94,0.12); border: 1px solid rgba(34,197,94,0.3); color: #22c55e; font-size: 10px; padding: 3px 10px; border-radius: 20px; }
+    .wh-name { font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 4px; }
+    .wh-address { font-size: 11px; color: #8899aa; margin-bottom: 14px; line-height: 1.5; }
+
+    .wh-stats { display: flex; gap: 16px; }
+    .wh-stat { text-align: center; }
+    .wh-stat-num { font-size: 16px; font-weight: 700; color: #fff; }
+    .wh-stat-label { font-size: 9px; color: #8899aa; margin-top: 2px; }
+
+    .wh-locations { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .wh-loc-title { font-size: 9px; color: #8899aa; letter-spacing: 1px; margin-bottom: 8px; }
+    .loc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .loc-tag { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 6px; padding: 3px 10px; font-size: 10px; color: #ccd6e8; }
+
+    .add-wh-btn { background: rgba(232,99,26,0.1); border: 1px dashed rgba(232,99,26,0.3); border-radius: 14px; padding: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; cursor: pointer; transition: all 0.2s; color: #e8631a; font-size: 13px; font-weight: 600; }
+    .add-wh-btn:hover { background: rgba(232,99,26,0.15); }
+    .add-wh-btn span { font-size: 28px; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); z-index: 200; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: rgba(13,18,36,0.97); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px; width: 500px; max-height: 85vh; overflow-y: auto; }
+    .modal-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .modal-sub { font-size: 12px; color: #8899aa; margin-bottom: 24px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 11px; color: #8899aa; margin-bottom: 6px; }
+    .field input, .field select, .field textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #e2e8f0; outline: none; transition: border-color 0.2s; font-family: 'Segoe UI', sans-serif; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #e8631a; }
+    .field input::placeholder, .field textarea::placeholder { color: #2a3a5a; }
+    .field textarea { resize: none; height: 70px; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-primary { flex: 1; background: #e8631a; color: #fff; border: none; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #cf5515; }
+    .btn-cancel-m { flex: 1; background: rgba(255,255,255,0.05); color: #8899aa; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 11px; font-size: 14px; cursor: pointer; }
+
+    /* Location modal */
+    .loc-input-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .loc-input-row input { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #e2e8f0; outline: none; }
+    .loc-input-row input:focus { border-color: #e8631a; }
+    .remove-loc { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+    .add-loc-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #8899aa; border-radius: 8px; padding: 7px 14px; font-size: 12px; cursor: pointer; margin-top: 4px; }
+    .add-loc-btn:hover { color: #fff; background: rgba(255,255,255,0.08); }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="ui">
+  <div class="navbar">
+    <div class="nav-logo">ISRO <span>INVENTORY</span></div>
+    <div class="nav-right">
+      <div class="nav-pill" id="rolePill">Supply Manager</div>
+      <div class="nav-icon">🔔<div class="notif-count">4</div></div>
+      <div class="nav-icon" onclick="window.location.href='profile.html'">👤</div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="sidebar">
+      <a class="si" href="dashboard.html">📊</a>
+      <a class="si" href="products.html">📦</a>
+      <a class="si" href="receipts.html">📥</a>
+      <a class="si" href="delivery.html">🚚</a>
+      <a class="si" href="transfers.html">🔄</a>
+      <a class="si" href="adjustments.html">📋</a>
+      <a class="si" href="history.html">🕐</a>
+      <div class="si-gap"></div>
+      <a class="si active" href="settings.html">⚙️</a>
+      <a class="si" href="profile.html">👤</a>
+    </div>
+
+    <div class="main">
+      <div class="topbar">
+        <div>
+          <div class="page-title">⚙️ <span>Warehouse Settings</span></div>
+          <div style="font-size:11px;color:#8899aa;margin-top:2px;">Manage ISRO facilities and storage locations</div>
+        </div>
+      </div>
+
+      <div class="manager-only">
+        🔒 &nbsp; This section is only accessible to Supply Managers
+      </div>
+
+      <div class="section-title">ISRO FACILITIES</div>
+
+      <div class="warehouses-grid" id="warehouseGrid"></div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Add Warehouse Modal -->
+<div class="modal-overlay" id="addWhModal">
+  <div class="modal">
+    <div class="modal-title">Add New Facility</div>
+    <div class="modal-sub">Register a new ISRO warehouse or facility</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Facility Code (3 letters)</label>
+        <input type="text" id="wh-code" placeholder="e.g. HYD" maxlength="3" style="text-transform:uppercase;"/>
+      </div>
+      <div class="field">
+        <label>Short Name</label>
+        <input type="text" id="wh-short" placeholder="e.g. Hyderabad"/>
+      </div>
+    </div>
+    <div class="field">
+      <label>Full Facility Name</label>
+      <input type="text" id="wh-name" placeholder="e.g. NRSA — National Remote Sensing Agency"/>
+    </div>
+    <div class="field">
+      <label>Address</label>
+      <textarea id="wh-address" placeholder="Full address of the facility..."></textarea>
+    </div>
+    <div class="field">
+      <label>Storage Locations</label>
+      <div id="locInputs">
+        <div class="loc-input-row">
+          <input type="text" placeholder="e.g. Main Store"/>
+          <button class="remove-loc" onclick="removeLoc(this)">✕</button>
+        </div>
+      </div>
+      <button class="add-loc-btn" onclick="addLocInput()">+ Add Location</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeWhModal()">Cancel</button>
+      <button class="btn-primary" onclick="addWarehouse()">Add Facility →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Warehouse Modal -->
+<div class="modal-overlay" id="editWhModal">
+  <div class="modal">
+    <div class="modal-title">Edit Facility</div>
+    <div class="modal-sub">Update warehouse details and locations</div>
+    <div class="field">
+      <label>Full Facility Name</label>
+      <input type="text" id="edit-wh-name"/>
+    </div>
+    <div class="field">
+      <label>Address</label>
+      <textarea id="edit-wh-address"></textarea>
+    </div>
+    <div class="field">
+      <label>Storage Locations</label>
+      <div id="editLocInputs"></div>
+      <button class="add-loc-btn" onclick="addEditLocInput()">+ Add Location</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeEditModal()">Cancel</button>
+      <button class="btn-primary" onclick="saveEdit()">Save Changes →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const role = localStorage.getItem('isro_role');
+  if (role === 'technician') {
+    document.getElementById('rolePill').textContent = 'Field Technician';
+    document.querySelector('.manager-only').innerHTML = '⚠️ &nbsp; View only — contact your Supply Manager to make changes';
+  }
+
+  let warehouses = [
+    { code:'BLR', name:'ISRO HQ — U R Rao Satellite Centre', address:'Airport Road, Vimanapura Post, Bengaluru, Karnataka 560017', status:'Active', products:420, locations:['Main Store','Rack A','Rack B','Production Floor','Cold Storage'] },
+    { code:'TVM', name:'VSSC — Vikram Sarabhai Space Centre', address:'Veli Hills, Thiruvananthapuram, Kerala 695022', status:'Active', products:218, locations:['Main Store','Assembly Floor','Test Bay','Cleanroom Storage'] },
+    { code:'AMD', name:'SAC — Space Applications Centre', address:'Jodhpur Tekra, Satellite Road, Ahmedabad, Gujarat 380015', status:'Active', products:156, locations:['Main Store','Rack C','Research Lab Store','Antenna Bay'] },
+    { code:'SHR', name:'SHAR — Satish Dhawan Space Centre', address:'Sriharikota, Nellore District, Andhra Pradesh 524124', status:'Active', products:98, locations:['Launch Pad Store','Propellant Bay','Vehicle Assembly','Ground Support Bay'] },
+  ];
+
+  let editingIndex = null;
+
+  function renderWarehouses() {
+    const grid = document.getElementById('warehouseGrid');
+    grid.innerHTML = warehouses.map((wh, i) => `
+      <div class="glass warehouse-card" onclick="openEditModal(${i})">
+        <div class="wh-header">
+          <div class="wh-code">${wh.code}</div>
+          <div class="wh-status">● ${wh.status}</div>
+        </div>
+        <div class="wh-name">${wh.name}</div>
+        <div class="wh-address">${wh.address}</div>
+        <div class="wh-stats">
+          <div class="wh-stat">
+            <div class="wh-stat-num">${wh.products}</div>
+            <div class="wh-stat-label">Components</div>
+          </div>
+          <div class="wh-stat">
+            <div class="wh-stat-num">${wh.locations.length}</div>
+            <div class="wh-stat-label">Locations</div>
+          </div>
+        </div>
+        <div class="wh-locations">
+          <div class="wh-loc-title">STORAGE LOCATIONS</div>
+          <div class="loc-tags">
+            ${wh.locations.map(l => `<span class="loc-tag">${l}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+    `).join('') + `
+      <div class="add-wh-btn" onclick="openWhModal()">
+        <span>+</span>
+        Add New Facility
+      </div>
+    `;
+  }
+
+  function openWhModal() { document.getElementById('addWhModal').classList.add('show'); }
+  function closeWhModal() { document.getElementById('addWhModal').classList.remove('show'); }
+
+  function addLocInput() {
+    const row = document.createElement('div');
+    row.className = 'loc-input-row';
+    row.innerHTML = `<input type="text" placeholder="e.g. Rack D"/><button class="remove-loc" onclick="removeLoc(this)">✕</button>`;
+    document.getElementById('locInputs').appendChild(row);
+  }
+
+  function removeLoc(btn) {
+    const rows = document.getElementById('locInputs').querySelectorAll('.loc-input-row');
+    if (rows.length > 1) btn.closest('.loc-input-row').remove();
+  }
+
+  function addWarehouse() {
+    const code = document.getElementById('wh-code').value.trim().toUpperCase();
+    const name = document.getElementById('wh-name').value.trim();
+    const address = document.getElementById('wh-address').value.trim();
+    const locRows = document.getElementById('locInputs').querySelectorAll('input');
+    const locations = Array.from(locRows).map(i => i.value.trim()).filter(Boolean);
+    if (!code || !name) { alert('Please enter facility code and name'); return; }
+    if (warehouses.find(w => w.code === code)) { alert('Facility code already exists'); return; }
+    warehouses.push({ code, name, address, status:'Active', products:0, locations: locations.length ? locations : ['Main Store'] });
+    renderWarehouses();
+    closeWhModal();
+    showToast(`🏭 ${code} facility added!`);
+  }
+
+  function openEditModal(i) {
+    editingIndex = i;
+    const wh = warehouses[i];
+    document.getElementById('edit-wh-name').value = wh.name;
+    document.getElementById('edit-wh-address').value = wh.address;
+    const container = document.getElementById('editLocInputs');
+    container.innerHTML = wh.locations.map(l => `
+      <div class="loc-input-row">
+        <input type="text" value="${l}"/>
+        <button class="remove-loc" onclick="removeEditLoc(this)">✕</button>
+      </div>
+    `).join('');
+    document.getElementById('editWhModal').classList.add('show');
+  }
+
+  function closeEditModal() { document.getElementById('editWhModal').classList.remove('show'); }
+
+  function addEditLocInput() {
+    const row = document.createElement('div');
+    row.className = 'loc-input-row';
+    row.innerHTML = `<input type="text" placeholder="New location"/><button class="remove-loc" onclick="removeEditLoc(this)">✕</button>`;
+    document.getElementById('editLocInputs').appendChild(row);
+  }
+
+  function removeEditLoc(btn) {
+    const rows = document.getElementById('editLocInputs').querySelectorAll('.loc-input-row');
+    if (rows.length > 1) btn.closest('.loc-input-row').remove();
+  }
+
+  function saveEdit() {
+    const wh = warehouses[editingIndex];
+    wh.name = document.getElementById('edit-wh-name').value.trim();
+    wh.address = document.getElementById('edit-wh-address').value.trim();
+    const locInputs = document.getElementById('editLocInputs').querySelectorAll('input');
+    wh.locations = Array.from(locInputs).map(i => i.value.trim()).filter(Boolean);
+    renderWarehouses();
+    closeEditModal();
+    showToast(`✅ ${wh.code} updated!`);
+  }
+
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(13,18,36,0.95);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;padding:12px 24px;border-radius:12px;font-size:13px;z-index:999;backdrop-filter:blur(20px);';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  renderWarehouses();
+
+  // Starfield
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [], mouse = { x: window.innerWidth/2, y: window.innerHeight/2 };
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function createStars() { stars = []; for(let i=0;i<180;i++) stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.4+0.2,depth:Math.random()*3+1,opacity:Math.random()*0.7+0.2,tw:Math.random()*0.01+0.003,twd:Math.random()>0.5?1:-1}); }
+  window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+  function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); stars.forEach(s=>{const ox=(mouse.x-canvas.width/2)/(canvas.width/2)*s.depth*5;const oy=(mouse.y-canvas.height/2)/(canvas.height/2)*s.depth*5;s.opacity+=s.tw*s.twd;if(s.opacity>=1||s.opacity<=0.1)s.twd*=-1;ctx.beginPath();ctx.arc(s.x+ox,s.y+oy,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${s.opacity})`;ctx.fill();}); requestAnimationFrame(draw); }
+  resize(); createStars(); draw();
+  window.addEventListener('resize',()=>{resize();createStars();});
+</script>
+
+</body>
+</html>
