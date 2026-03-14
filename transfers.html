@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ISRO Inventory — Transfers</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #05060f; height: 100vh; overflow: hidden; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; }
+    canvas#stars { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+    .ui { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100vh; }
+
+    .navbar { background: rgba(13,18,36,0.6); backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255,255,255,0.07); padding: 0 20px; height: 50px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .nav-logo { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: 1px; }
+    .nav-logo span { color: #e8631a; }
+    .nav-right { display: flex; align-items: center; gap: 12px; }
+    .nav-pill { background: rgba(232,99,26,0.15); border: 1px solid rgba(232,99,26,0.3); color: #e8631a; font-size: 11px; padding: 4px 12px; border-radius: 20px; }
+    .nav-icon { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-size: 14px; cursor: pointer; position: relative; }
+    .notif-count { position: absolute; top: -4px; right: -4px; background: #ef4444; color: #fff; font-size: 9px; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; }
+
+    .body { display: flex; flex: 1; overflow: hidden; }
+
+    .sidebar { width: 54px; background: rgba(8,12,28,0.7); backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; align-items: center; padding: 12px 0; gap: 6px; flex-shrink: 0; }
+    .si { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all 0.2s; text-decoration: none; }
+    .si:hover { background: rgba(255,255,255,0.06); }
+    .si.active { background: rgba(232,99,26,0.2); border: 1px solid rgba(232,99,26,0.35); }
+    .si-gap { flex: 1; }
+
+    .glass { background: rgba(255,255,255,0.04); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
+
+    .main { flex: 1; display: flex; flex-direction: column; padding: 14px; gap: 12px; overflow: hidden; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .page-title { font-size: 18px; font-weight: 700; color: #fff; }
+    .page-title span { color: #e8631a; }
+    .btn-add { background: #e8631a; color: #fff; border: none; border-radius: 8px; padding: 9px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+    .btn-add:hover { background: #cf5515; }
+
+    .stats-row { display: flex; gap: 10px; flex-shrink: 0; }
+    .stat-card { flex: 1; padding: 12px 16px; display: flex; align-items: center; gap: 12px; }
+    .stat-icon { font-size: 22px; }
+    .stat-num { font-size: 20px; font-weight: 700; color: #fff; line-height: 1; }
+    .stat-label { font-size: 10px; color: #8899aa; margin-top: 2px; }
+
+    .filters { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
+    .filter-pill { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 6px 14px; font-size: 11px; color: #8899aa; cursor: pointer; transition: all 0.2s; }
+    .filter-pill:hover, .filter-pill.active { background: rgba(232,99,26,0.15); border-color: rgba(232,99,26,0.4); color: #e8631a; }
+    .search-box { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; padding: 6px 16px; font-size: 11px; color: #e2e8f0; outline: none; width: 200px; margin-left: auto; }
+    .search-box::placeholder { color: #4a5a7a; }
+    .search-box:focus { border-color: rgba(232,99,26,0.4); }
+
+    .table-wrap { flex: 1; overflow-y: auto; }
+    .table-wrap::-webkit-scrollbar { width: 4px; }
+    .table-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; }
+    thead th { padding: 10px 14px; text-align: left; font-size: 9px; color: #8899aa; letter-spacing: 1.5px; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.06); position: sticky; top: 0; background: rgba(8,12,28,0.95); backdrop-filter: blur(20px); }
+    tbody tr { border-bottom: 1px solid rgba(255,255,255,0.04); cursor: pointer; transition: background 0.15s; }
+    tbody tr:hover { background: rgba(255,255,255,0.04); }
+    tbody td { padding: 11px 14px; font-size: 12px; color: #ccd6e8; }
+
+    .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+    .badge-scheduled  { background: rgba(245,158,11,0.1);  border: 1px solid rgba(245,158,11,0.3);  color: #f59e0b; }
+    .badge-transit    { background: rgba(59,130,246,0.1);  border: 1px solid rgba(59,130,246,0.3);  color: #3b82f6; }
+    .badge-completed  { background: rgba(34,197,94,0.12);  border: 1px solid rgba(34,197,94,0.3);   color: #22c55e; }
+    .badge-cancel     { background: rgba(239,68,68,0.1);   border: 1px solid rgba(239,68,68,0.3);   color: #ef4444; }
+
+    .route-arrow { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; }
+    .route-from { background: rgba(232,99,26,0.1); border: 1px solid rgba(232,99,26,0.2); border-radius: 6px; padding: 2px 8px; color: #e8631a; font-size: 10px; }
+    .route-to   { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.2); border-radius: 6px; padding: 2px 8px; color: #3b82f6; font-size: 10px; }
+
+    /* Detail Panel */
+    .detail-panel { position: fixed; right: -500px; top: 50px; width: 480px; height: calc(100vh - 50px); background: rgba(10,14,30,0.97); backdrop-filter: blur(20px); border-left: 1px solid rgba(255,255,255,0.08); padding: 24px; z-index: 150; transition: right 0.3s ease; overflow-y: auto; }
+    .detail-panel.open { right: 0; }
+    .detail-panel::-webkit-scrollbar { width: 4px; }
+    .detail-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+    .dp-close { position: absolute; top: 16px; right: 16px; cursor: pointer; font-size: 18px; color: #8899aa; }
+    .dp-close:hover { color: #fff; }
+    .dp-label { font-size: 9px; color: #e8631a; letter-spacing: 2px; font-weight: 700; margin-bottom: 4px; }
+    .dp-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 16px; }
+    .dp-section { font-size: 9px; color: #e8631a; letter-spacing: 2px; font-weight: 700; margin: 16px 0 8px; }
+    .dp-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+    .dp-row span:first-child { color: #8899aa; }
+    .dp-row span:last-child { color: #e2e8f0; font-weight: 500; }
+
+    .route-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07); border-radius: 12px; padding: 16px; display: flex; align-items: center; justify-content: space-between; margin: 12px 0; }
+    .route-box { text-align: center; }
+    .route-box-label { font-size: 9px; color: #8899aa; margin-bottom: 4px; }
+    .route-box-val { font-size: 14px; font-weight: 700; }
+    .route-mid { font-size: 20px; color: #4a5a7a; }
+
+    .items-table { width: 100%; border-collapse: collapse; margin-top: 4px; }
+    .items-table th { font-size: 9px; color: #8899aa; letter-spacing: 1px; text-transform: uppercase; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.06); text-align: left; }
+    .items-table td { font-size: 11px; color: #ccd6e8; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+
+    .action-btn { width: 100%; border: none; border-radius: 10px; padding: 13px; font-size: 14px; font-weight: 700; cursor: pointer; margin-top: 12px; transition: all 0.2s; }
+    .btn-start    { background: #f59e0b; color: #fff; }
+    .btn-start:hover { background: #d97706; }
+    .btn-complete { background: #22c55e; color: #fff; }
+    .btn-complete:hover { background: #16a34a; }
+    .btn-done     { background: rgba(255,255,255,0.08); color: #4a5a7a; cursor: not-allowed; }
+
+    /* Modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(6px); z-index: 200; display: none; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: rgba(13,18,36,0.97); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 32px; width: 520px; max-height: 85vh; overflow-y: auto; }
+    .modal-title { font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .modal-sub { font-size: 12px; color: #8899aa; margin-bottom: 24px; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 11px; color: #8899aa; margin-bottom: 6px; }
+    .field input, .field select { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #e2e8f0; outline: none; transition: border-color 0.2s; }
+    .field input:focus, .field select:focus { border-color: #e8631a; }
+    .field input::placeholder { color: #2a3a5a; }
+    .field select option { background: #0d1224; }
+    .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .items-section { margin: 16px 0; }
+    .items-section-title { font-size: 11px; color: #e8631a; font-weight: 700; letter-spacing: 1px; margin-bottom: 10px; }
+    .item-row { display: grid; grid-template-columns: 1fr 100px 80px; gap: 8px; margin-bottom: 8px; }
+    .item-row select, .item-row input { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: #e2e8f0; outline: none; }
+    .item-row select option { background: #0d1224; }
+    .remove-btn { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+    .add-item-btn { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #8899aa; border-radius: 8px; padding: 8px 16px; font-size: 12px; cursor: pointer; margin-top: 4px; }
+    .add-item-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-primary { flex: 1; background: #e8631a; color: #fff; border: none; border-radius: 8px; padding: 11px; font-size: 14px; font-weight: 600; cursor: pointer; }
+    .btn-primary:hover { background: #cf5515; }
+    .btn-cancel-m { flex: 1; background: rgba(255,255,255,0.05); color: #8899aa; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 11px; font-size: 14px; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="ui">
+
+  <div class="navbar">
+    <div class="nav-logo">ISRO <span>INVENTORY</span></div>
+    <div class="nav-right">
+      <div class="nav-pill" id="rolePill">Supply Manager</div>
+      <div class="nav-icon">🔔<div class="notif-count">4</div></div>
+      <div class="nav-icon" onclick="window.location.href='profile.html'">👤</div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <div class="sidebar">
+      <a class="si" href="dashboard.html">📊</a>
+      <a class="si" href="products.html">📦</a>
+      <a class="si" href="receipts.html">📥</a>
+      <a class="si" href="delivery.html">🚚</a>
+      <a class="si active" href="transfers.html">🔄</a>
+      <a class="si" href="adjustments.html">📋</a>
+      <a class="si" href="history.html">🕐</a>
+      <div class="si-gap"></div>
+      <a class="si" href="settings.html">⚙️</a>
+      <a class="si" href="profile.html">👤</a>
+    </div>
+
+    <div class="main">
+
+      <div class="topbar">
+        <div>
+          <div class="page-title">🔄 <span>Internal Transfers</span></div>
+          <div style="font-size:11px;color:#8899aa;margin-top:2px;">Move components between ISRO facilities & locations</div>
+        </div>
+        <button class="btn-add" onclick="openModal()">+ New Transfer</button>
+      </div>
+
+      <div class="stats-row">
+        <div class="glass stat-card">
+          <div class="stat-icon">🔄</div>
+          <div><div class="stat-num">11</div><div class="stat-label">Total Transfers</div></div>
+        </div>
+        <div class="glass stat-card">
+          <div class="stat-icon">📅</div>
+          <div><div class="stat-num" style="color:#f59e0b;">3</div><div class="stat-label">Scheduled</div></div>
+        </div>
+        <div class="glass stat-card">
+          <div class="stat-icon">🚛</div>
+          <div><div class="stat-num" style="color:#3b82f6;">2</div><div class="stat-label">In Transit</div></div>
+        </div>
+        <div class="glass stat-card">
+          <div class="stat-icon">✅</div>
+          <div><div class="stat-num" style="color:#22c55e;">6</div><div class="stat-label">Completed</div></div>
+        </div>
+      </div>
+
+      <div class="filters">
+        <div class="filter-pill active" onclick="filterStatus('all',this)">All</div>
+        <div class="filter-pill" onclick="filterStatus('Scheduled',this)">Scheduled</div>
+        <div class="filter-pill" onclick="filterStatus('In Transit',this)">In Transit</div>
+        <div class="filter-pill" onclick="filterStatus('Completed',this)">Completed</div>
+        <div class="filter-pill" onclick="filterStatus('Cancelled',this)">Cancelled</div>
+        <input class="search-box" type="text" placeholder="🔍  Search transfer or location..." oninput="searchTransfers(this.value)"/>
+      </div>
+
+      <div class="glass table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Transfer ID</th>
+              <th>Route</th>
+              <th>Components</th>
+              <th>Qty</th>
+              <th>Mission</th>
+              <th>Date</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="transferTable"></tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Detail Panel -->
+<div class="detail-panel" id="detailPanel">
+  <div class="dp-close" onclick="closeDetail()">✕</div>
+  <div id="detailContent"></div>
+</div>
+
+<!-- New Transfer Modal -->
+<div class="modal-overlay" id="addModal">
+  <div class="modal">
+    <div class="modal-title">New Internal Transfer</div>
+    <div class="modal-sub">Move components between ISRO warehouses or locations</div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Transfer ID</label>
+        <input type="text" id="f-id" readonly style="color:#4a6a9a;"/>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="f-date"/>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>From Location</label>
+        <select id="f-from">
+          <option>BLR — Main Store</option>
+          <option>BLR — Rack A</option>
+          <option>BLR — Rack B</option>
+          <option>TVM — Main Store</option>
+          <option>TVM — Assembly Floor</option>
+          <option>AMD — Main Store</option>
+          <option>AMD — Rack C</option>
+          <option>SHR — Launch Pad Store</option>
+          <option>SHR — Propellant Bay</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>To Location</label>
+        <select id="f-to">
+          <option>TVM — Assembly Floor</option>
+          <option>BLR — Production Floor</option>
+          <option>SHR — Launch Pad Store</option>
+          <option>AMD — Rack C</option>
+          <option>BLR — Rack A</option>
+          <option>BLR — Rack B</option>
+          <option>TVM — Main Store</option>
+          <option>SHR — Propellant Bay</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Mission Tag</label>
+        <select id="f-mission">
+          <option>Gaganyaan Crewed</option>
+          <option>NISAR</option>
+          <option>Aditya-L1</option>
+          <option>General Stock</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Handled By</label>
+        <select id="f-handler">
+          <option>Field Technician — BLR</option>
+          <option>Field Technician — TVM</option>
+          <option>Field Technician — AMD</option>
+          <option>Field Technician — SHR</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="items-section">
+      <div class="items-section-title">COMPONENTS TO TRANSFER</div>
+      <div id="itemRows">
+        <div class="item-row">
+          <select><option value="">Select component...</option><option>Cryogenic Engine Nozzle</option><option>Titanium Heat Shield</option><option>Solar Panel (Satellite)</option><option>Carbon Fibre Panel</option><option>Space Suit</option><option>Oxygen Canister</option><option>Parachute Assembly</option><option>Gyroscope Sensor</option><option>Reaction Wheel</option><option>Thermal Blanket</option></select>
+          <input type="number" placeholder="Qty" min="1"/>
+          <button class="remove-btn" onclick="removeRow(this)">✕</button>
+        </div>
+      </div>
+      <button class="add-item-btn" onclick="addItemRow()">+ Add Component</button>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-cancel-m" onclick="closeModal()">Cancel</button>
+      <button class="btn-primary" onclick="createTransfer()">Schedule Transfer →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const role = localStorage.getItem('isro_role');
+  if (role === 'technician') document.getElementById('rolePill').textContent = 'Field Technician';
+  document.getElementById('f-date').valueAsDate = new Date();
+  document.getElementById('f-id').value = 'TRF-012';
+
+  let transfers = [
+    { id:'TRF-001', from:'BLR — Main Store',    to:'SHR — Launch Pad Store',  items:['Cryogenic Engine Nozzle x5'], qty:5,  mission:'Gaganyaan Crewed', date:'2026-03-01', status:'Completed', handler:'Field Technician — BLR' },
+    { id:'TRF-002', from:'TVM — Main Store',     to:'TVM — Assembly Floor',    items:['Space Suit x3','Parachute Assembly x2'], qty:5, mission:'Gaganyaan Crewed', date:'2026-03-03', status:'Completed', handler:'Field Technician — TVM' },
+    { id:'TRF-003', from:'AMD — Main Store',     to:'BLR — Production Floor',  items:['Carbon Fibre Panel x30'], qty:30, mission:'Gaganyaan Crewed', date:'2026-03-05', status:'Completed', handler:'Field Technician — AMD' },
+    { id:'TRF-004', from:'BLR — Rack A',         to:'BLR — Rack B',            items:['Gyroscope Sensor x10'], qty:10, mission:'NISAR', date:'2026-03-06', status:'Completed', handler:'Field Technician — BLR' },
+    { id:'TRF-005', from:'TVM — Main Store',     to:'SHR — Launch Pad Store',  items:['Titanium Heat Shield x15'], qty:15, mission:'Gaganyaan Crewed', date:'2026-03-07', status:'Completed', handler:'Field Technician — TVM' },
+    { id:'TRF-006', from:'BLR — Main Store',     to:'AMD — Rack C',            items:['Thermal Blanket x20'], qty:20, mission:'General Stock', date:'2026-03-08', status:'Completed', handler:'Field Technician — BLR' },
+    { id:'TRF-007', from:'SHR — Propellant Bay', to:'SHR — Launch Pad Store',  items:['Liquid Hydrogen Fuel x200'], qty:200, mission:'Gaganyaan Crewed', date:'2026-03-10', status:'In Transit', handler:'Field Technician — SHR' },
+    { id:'TRF-008', from:'BLR — Rack B',         to:'TVM — Assembly Floor',    items:['Reaction Wheel x5'], qty:5, mission:'NISAR', date:'2026-03-11', status:'In Transit', handler:'Field Technician — TVM' },
+    { id:'TRF-009', from:'AMD — Main Store',     to:'BLR — Production Floor',  items:['Carbon Fibre Panel x25','Thermal Blanket x10'], qty:35, mission:'Gaganyaan Crewed', date:'2026-03-14', status:'Scheduled', handler:'Field Technician — AMD' },
+    { id:'TRF-010', from:'BLR — Main Store',     to:'SHR — Launch Pad Store',  items:['Titanium Heat Shield x8'], qty:8, mission:'Gaganyaan Crewed', date:'2026-03-14', status:'Scheduled', handler:'Field Technician — BLR' },
+    { id:'TRF-011', from:'TVM — Main Store',     to:'TVM — Assembly Floor',    items:['Oxygen Canister x15'], qty:15, mission:'Gaganyaan Crewed', date:'2026-03-15', status:'Scheduled', handler:'Field Technician — TVM' },
+  ];
+
+  let filtered = [...transfers];
+
+  function badgeHTML(status) {
+    const map = { Scheduled:'badge-scheduled', 'In Transit':'badge-transit', Completed:'badge-completed', Cancelled:'badge-cancel' };
+    return `<span class="badge ${map[status]||'badge-scheduled'}">● ${status}</span>`;
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('transferTable');
+    if (!filtered.length) {
+      tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#4a5a7a;padding:40px;">No transfers found</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = filtered.map(t => `
+      <tr onclick="openDetail('${t.id}')">
+        <td style="font-weight:700;color:#e8631a;font-family:monospace;">${t.id}</td>
+        <td>
+          <div class="route-arrow">
+            <span class="route-from">${t.from.split('—')[0].trim()}</span>
+            <span style="color:#4a5a7a;">→</span>
+            <span class="route-to">${t.to.split('—')[0].trim()}</span>
+          </div>
+        </td>
+        <td style="color:#8899aa;font-size:11px;">${t.items.length} component${t.items.length>1?'s':''}</td>
+        <td style="font-weight:700;color:#fff;">${t.qty}</td>
+        <td style="color:#8899aa;font-size:11px;">${t.mission}</td>
+        <td style="color:#8899aa;">${t.date}</td>
+        <td>${badgeHTML(t.status)}</td>
+      </tr>
+    `).join('');
+  }
+
+  function filterStatus(status, el) {
+    document.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+    el.classList.add('active');
+    filtered = status === 'all' ? [...transfers] : transfers.filter(t => t.status === status);
+    renderTable();
+  }
+
+  function searchTransfers(q) {
+    const query = q.toLowerCase();
+    filtered = transfers.filter(t =>
+      t.id.toLowerCase().includes(query) ||
+      t.from.toLowerCase().includes(query) ||
+      t.to.toLowerCase().includes(query)
+    );
+    renderTable();
+  }
+
+  function openDetail(id) {
+    const t = transfers.find(x => x.id === id);
+
+    const fromColor = '#e8631a';
+    const toColor = '#3b82f6';
+
+    let actionBtn = '';
+    if (t.status === 'Completed' || t.status === 'Cancelled') {
+      actionBtn = `<button class="action-btn btn-done" disabled>${t.status === 'Completed' ? '✅ Transfer Completed' : '🚫 Cancelled'}</button>`;
+    } else if (t.status === 'Scheduled') {
+      actionBtn = `<button class="action-btn btn-start" onclick="advanceTransfer('${t.id}')">🚛 Start Transfer — Mark In Transit</button>`;
+    } else if (t.status === 'In Transit') {
+      actionBtn = `<button class="action-btn btn-complete" onclick="advanceTransfer('${t.id}')">✅ Complete Transfer — Update Location</button>`;
+    }
+
+    document.getElementById('detailContent').innerHTML = `
+      <div class="dp-label">INTERNAL TRANSFER</div>
+      <div class="dp-title">${t.id}</div>
+      ${badgeHTML(t.status)}
+
+      <div class="route-card">
+        <div class="route-box">
+          <div class="route-box-label">FROM</div>
+          <div class="route-box-val" style="color:${fromColor};">${t.from}</div>
+        </div>
+        <div class="route-mid">→</div>
+        <div class="route-box">
+          <div class="route-box-label">TO</div>
+          <div class="route-box-val" style="color:${toColor};">${t.to}</div>
+        </div>
+      </div>
+
+      <div class="dp-section">DETAILS</div>
+      <div class="dp-row"><span>Date</span><span>${t.date}</span></div>
+      <div class="dp-row"><span>Mission</span><span>${t.mission}</span></div>
+      <div class="dp-row"><span>Handled By</span><span>${t.handler}</span></div>
+      <div class="dp-row"><span>Total Qty</span><span style="color:#fff;font-weight:700;">${t.qty} units</span></div>
+
+      <div class="dp-section">COMPONENTS</div>
+      <table class="items-table">
+        <thead><tr><th>Component</th><th>Quantity</th></tr></thead>
+        <tbody>
+          ${t.items.map(item => {
+            const parts = item.split(' x');
+            return `<tr><td>${parts[0]}</td><td style="color:#3b82f6;font-weight:700;">${parts[1]}</td></tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+
+      ${actionBtn}
+      ${t.status !== 'Completed' && t.status !== 'Cancelled' ? `<button onclick="cancelTransfer('${t.id}')" style="width:100%;margin-top:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:10px;padding:10px;font-size:13px;cursor:pointer;">Cancel Transfer</button>` : ''}
+    `;
+    document.getElementById('detailPanel').classList.add('open');
+  }
+
+  function advanceTransfer(id) {
+    const t = transfers.find(x => x.id === id);
+    if (t.status === 'Scheduled') {
+      t.status = 'In Transit';
+      showToast(`🚛 ${id} is now In Transit!`);
+    } else if (t.status === 'In Transit') {
+      t.status = 'Completed';
+      showToast(`✅ ${id} completed — location updated!`);
+    }
+    renderTable();
+    openDetail(id);
+  }
+
+  function cancelTransfer(id) {
+    const t = transfers.find(x => x.id === id);
+    t.status = 'Cancelled';
+    renderTable();
+    openDetail(id);
+    showToast(`🚫 ${id} cancelled.`);
+  }
+
+  function closeDetail() { document.getElementById('detailPanel').classList.remove('open'); }
+  function openModal() { document.getElementById('addModal').classList.add('show'); }
+  function closeModal() { document.getElementById('addModal').classList.remove('show'); }
+
+  function addItemRow() {
+    const row = document.createElement('div');
+    row.className = 'item-row';
+    row.innerHTML = `<select><option value="">Select component...</option><option>Cryogenic Engine Nozzle</option><option>Titanium Heat Shield</option><option>Solar Panel (Satellite)</option><option>Carbon Fibre Panel</option><option>Space Suit</option><option>Oxygen Canister</option><option>Parachute Assembly</option><option>Gyroscope Sensor</option><option>Reaction Wheel</option><option>Thermal Blanket</option></select><input type="number" placeholder="Qty" min="1"/><button class="remove-btn" onclick="removeRow(this)">✕</button>`;
+    document.getElementById('itemRows').appendChild(row);
+  }
+
+  function removeRow(btn) {
+    const rows = document.getElementById('itemRows').querySelectorAll('.item-row');
+    if (rows.length > 1) btn.closest('.item-row').remove();
+  }
+
+  function createTransfer() {
+    const from = document.getElementById('f-from').value;
+    const to = document.getElementById('f-to').value;
+    const mission = document.getElementById('f-mission').value;
+    const date = document.getElementById('f-date').value;
+    const handler = document.getElementById('f-handler').value;
+    const rows = document.getElementById('itemRows').querySelectorAll('.item-row');
+    const items = []; let totalQty = 0;
+    rows.forEach(row => {
+      const comp = row.querySelector('select').value;
+      const qty = parseInt(row.querySelector('input').value) || 0;
+      if (comp && qty > 0) { items.push(`${comp} x${qty}`); totalQty += qty; }
+    });
+    if (!items.length) { alert('Please add at least one component'); return; }
+    if (from === to) { alert('From and To locations cannot be the same'); return; }
+    const newId = `TRF-0${12 + transfers.length}`;
+    transfers.unshift({ id:newId, from, to, items, qty:totalQty, mission, date, status:'Scheduled', handler });
+    filtered = [...transfers];
+    renderTable();
+    closeModal();
+    showToast(`🔄 ${newId} scheduled!`);
+  }
+
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(13,18,36,0.95);border:1px solid rgba(255,255,255,0.1);color:#e2e8f0;padding:12px 24px;border-radius:12px;font-size:13px;z-index:999;backdrop-filter:blur(20px);';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  renderTable();
+
+  // Starfield
+  const canvas = document.getElementById('stars');
+  const ctx = canvas.getContext('2d');
+  let stars = [], mouse = { x: window.innerWidth/2, y: window.innerHeight/2 };
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+  function createStars() { stars = []; for(let i=0;i<180;i++) stars.push({x:Math.random()*canvas.width,y:Math.random()*canvas.height,r:Math.random()*1.4+0.2,depth:Math.random()*3+1,opacity:Math.random()*0.7+0.2,tw:Math.random()*0.01+0.003,twd:Math.random()>0.5?1:-1}); }
+  window.addEventListener('mousemove',e=>{mouse.x=e.clientX;mouse.y=e.clientY;});
+  function draw() { ctx.clearRect(0,0,canvas.width,canvas.height); stars.forEach(s=>{const ox=(mouse.x-canvas.width/2)/(canvas.width/2)*s.depth*5;const oy=(mouse.y-canvas.height/2)/(canvas.height/2)*s.depth*5;s.opacity+=s.tw*s.twd;if(s.opacity>=1||s.opacity<=0.1)s.twd*=-1;ctx.beginPath();ctx.arc(s.x+ox,s.y+oy,s.r,0,Math.PI*2);ctx.fillStyle=`rgba(255,255,255,${s.opacity})`;ctx.fill();}); requestAnimationFrame(draw); }
+  resize(); createStars(); draw();
+  window.addEventListener('resize',()=>{resize();createStars();});
+</script>
+
+</body>
+</html>
