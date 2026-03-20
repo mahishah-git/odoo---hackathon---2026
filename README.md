@@ -1,2 +1,2 @@
-# odoo---hackathon---2026
-Repo for the Odoo x Indus Uni Hackathon
+ISRO warehouse inventory system
+14 March 2026
